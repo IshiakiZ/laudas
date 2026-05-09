@@ -1,0 +1,78 @@
+name: Bug report
+description: A `.laud` file produces wrong output, panics, or otherwise misbehaves
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The fastest path to a fix is a minimal `.laud` file that triggers the bug.
+
+  - type: textarea
+    id: laud
+    attributes:
+      label: Minimal `.laud` repro
+      description: Paste the smallest `.laud` file that triggers the bug. If it depends on multiple files (`use "X"`), paste each.
+      render: laudas
+      placeholder: |
+        fn surprising
+        vis appearing
+        eff pure
+        in x: int
+        out int
+        ex surprising(2) == 4
+        do
+        return x + x
+        end
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What `laudas` printed
+      description: Output of `laudas <file.laud>`, including the structured-payload JSON if there was a diagnostic.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: One sentence is fine.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `laudas --help` includes the version. Or check pyproject.toml.
+      placeholder: "v0.5.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Laudas?
+      options:
+        - Standalone `laudas.exe` from the releases page
+        - `pip install -e .` from a clone
+        - From the `dist/` build I produced myself
+        - Other (describe in the additional-context section)
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / Python version
+      placeholder: "Windows 11, Python 3.12"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might help — what you were trying to do, related demos, etc.

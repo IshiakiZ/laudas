@@ -36,6 +36,7 @@ PASS_FILES = [
     "demo_let_verify.laud",
     "demo_use_main.laud",
     "demo_record_verify.laud",
+    "demo_fold.laud",
 ]
 
 # Intentionally-broken demos that MUST fail (CI flags it as a regression

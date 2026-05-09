@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Tutorial
+    url: https://github.com/IshiakiZ/laudas/tree/main/tutorial
+    about: New to Laudas? Walk through the five-step tutorial first. Most "how do I…" questions are answered there.
+  - name: PRD
+    url: https://github.com/IshiakiZ/laudas/blob/main/prd.md
+    about: Canonical product spec. Read this before proposing semantic changes.
+  - name: Compression analysis
+    url: https://github.com/IshiakiZ/laudas/blob/main/compression-target.md
+    about: Read this before opening "Laudas isn't shorter than Python" issues — the comparison is laid out carefully.

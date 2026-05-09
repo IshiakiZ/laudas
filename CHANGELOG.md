@@ -4,6 +4,26 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.4] — 2026-05-09 — multi-arg lambdas + community plumbing
+
+### Added — language
+
+- **Multi-arg lambdas** — `(a, b) -> a + b`, `(acc, x) -> acc + x`. The single-arg `x -> EXPR` form continues to work.
+- **`.fold(init, fn)`** — works now that two-arg callbacks parse cleanly. `xs.fold(0, (acc, x) -> acc + x)`.
+
+### Added — community
+
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) — runs the full test sweep on Linux + macOS + Windows × Python 3.10 + 3.12 on every push/PR.
+- **`tests/test_all.py`** — runs `laudas` over every demo / tutorial / corpus seed, asserts expected pass/fail behavior. 19 files covered.
+- **Issue templates** — `bug_report.yml`, `verifier_limit.yml`, `feature_request.yml`, plus a `config.yml` that points first-time issuers at the tutorial / PRD / compression analysis.
+- **CI badge + license badge** in the README.
+
+### Demo
+
+[`demo_fold.laud`](demo_fold.laud) — sum, product, and string concatenation all via `.fold()` with `(acc, x) -> ...` lambdas.
+
+---
+
 ## [v0.5.3] — 2026-05-09 — voronin learns records
 
 ### Added — verifier

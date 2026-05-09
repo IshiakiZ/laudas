@@ -1,0 +1,39 @@
+name: Verifier limit
+description: voronin reported `verifier limitation: ...` on a function you think it should handle
+title: "[verifier] "
+labels: ["voronin", "verifier-limit", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        voronin (the Z3-backed verifier) deliberately reports `verifier limitation: ...` on patterns it doesn't yet handle, instead of pretending to verify. This template is for proposing patterns that should move out of "limitation" into "supported."
+
+  - type: textarea
+    id: laud
+    attributes:
+      label: The `.laud` function that voronin couldn't verify
+      render: laudas
+    validations:
+      required: true
+
+  - type: input
+    id: limit
+    attributes:
+      label: The exact `verifier limitation: ...` message
+      placeholder: "verifier limitation: only `let`, `if EXPR { return EXPR }` early-returns and a final `return EXPR` are supported in v0.5.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this should be in scope
+      description: |
+        Is this a common pattern? Does it have a known Z3 encoding? Is there a simpler workaround you'd accept instead?
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround you're using now
+      description: |
+        How are you working around the limit? (`ex` slots? splitting the function? skipping verification?)

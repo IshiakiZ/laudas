@@ -1,0 +1,46 @@
+; v0.5.4 demo — multi-arg lambdas via .fold(init, (acc, x) -> ...)
+;
+; Run:  laudas demo_fold.laud
+;
+; Lambdas now support multiple parameters via the `(a, b, c) -> EXPR` form.
+; This unblocks .fold() — and any future operation that needs more than one
+; arg in its callback.
+
+
+fn sum_via_fold
+vis appearing
+eff pure
+in xs: list<int>
+out int
+ex sum_via_fold([1, 2, 3, 4]) == 10
+ex sum_via_fold([]) == 0
+ex sum_via_fold([7]) == 7
+do
+return xs.fold(0, (acc, x) -> acc + x)
+end
+
+
+fn product
+vis appearing
+eff pure
+in xs: list<int>
+out int
+ex product([2, 3, 4]) == 24
+ex product([]) == 1
+ex product([5]) == 5
+do
+return xs.fold(1, (acc, x) -> acc * x)
+end
+
+
+fn concat_strings
+vis appearing
+eff pure
+in xs: list<str>
+out str
+ex concat_strings(["a", "b", "c"]) == "abc"
+ex concat_strings([]) == ""
+ex concat_strings(["only"]) == "only"
+do
+return xs.fold("", (acc, s) -> acc + s)
+end

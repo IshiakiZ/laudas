@@ -261,14 +261,20 @@ def parse_type(s: str) -> Type:
 
 @dataclass
 class LaudasLambda:
-    """A first-class function value (closure). Used for `.filter(x -> ...)` etc."""
-    param: str
+    """A first-class function value (closure). Used for `.filter(x -> ...)`,
+    `.fold(0, (acc, x) -> acc + x)`, etc."""
+    params: list[str]
     body: str
     env: dict[str, Any]
 
-    def call(self, arg: Any) -> Any:
+    def call(self, *args: Any) -> Any:
+        if len(args) != len(self.params):
+            raise RuntimeFail(
+                f"lambda expected {len(self.params)} arg(s), got {len(args)}"
+            )
         new_env = dict(self.env)
-        new_env[self.param] = arg
+        for p, a in zip(self.params, args):
+            new_env[p] = a
         return eval_expr(self.body, new_env)
 
 
@@ -289,7 +295,10 @@ def fmt_value(v: Any) -> str:
         fields = [f"{k}: {fmt_value(val)}" for k, val in v.items() if not k.startswith("__")]
         return f"{type_name} {{ {', '.join(fields)} }}"
     if isinstance(v, LaudasLambda):
-        return f"<lambda {v.param} -> ...>"
+        params_str = ", ".join(v.params) if len(v.params) != 1 else v.params[0]
+        if len(v.params) != 1:
+            params_str = f"({params_str})"
+        return f"<lambda {params_str} -> ...>"
     return repr(v)
 
 
@@ -417,8 +426,14 @@ def _list_map(xs: list, fn: Any) -> Any:
 def _list_fold(xs: list, init: Any, fn: Any) -> Any:
     if not isinstance(fn, LaudasLambda):
         raise RuntimeFail(".fold() needs a lambda, got " + fmt_value(fn))
-    # 2-arg lambda not supported in v0.5 — restrict fold to a sentinel-pair lambda
-    raise RuntimeFail(".fold() needs a 2-arg lambda; not yet supported in v0.5")
+    if len(fn.params) != 2:
+        raise RuntimeFail(
+            f".fold() needs a 2-arg lambda `(acc, x) -> ...`, got {len(fn.params)}-arg"
+        )
+    acc = init
+    for x in xs:
+        acc = fn.call(acc, x)
+    return acc
 
 
 # Module-level registry of type aliases, populated by check_file().
@@ -795,14 +810,23 @@ def eval_expr(expr: str, env: dict[str, Any]) -> Any:
     if s.startswith("(") and s.endswith(")") and balanced(s):
         return eval_expr(s[1:-1], env)
 
-    # 2. Lambda: `IDENT -> EXPR` (lowest precedence)
+    # 2. Lambda: `IDENT -> EXPR` or `(IDENT, IDENT, ...) -> EXPR` (lowest precedence)
     arrow_idx = find_top_level_substr(s, "->")
     if arrow_idx >= 0:
         lhs = s[:arrow_idx].strip()
         rhs = s[arrow_idx + 2:].strip()
+        # Single-arg form: `x -> EXPR`
         if re.match(r"^[A-Za-z_]\w*$", lhs):
-            return LaudasLambda(param=lhs, body=rhs, env=dict(env))
-        # else: fall through (might be a type-annotation arrow somewhere; let parser fail later)
+            return LaudasLambda(params=[lhs], body=rhs, env=dict(env))
+        # Multi-arg form: `(a, b, c) -> EXPR`  (or `() -> EXPR`)
+        if lhs.startswith("(") and lhs.endswith(")") and balanced(lhs):
+            inner = lhs[1:-1].strip()
+            if not inner:
+                return LaudasLambda(params=[], body=rhs, env=dict(env))
+            parts = [p.strip() for p in split_top_level_commas(inner)]
+            if parts and all(re.match(r"^[A-Za-z_]\w*$", p) for p in parts):
+                return LaudasLambda(params=parts, body=rhs, env=dict(env))
+        # else: fall through (might be a type-annotation arrow somewhere)
 
     # 3. Binary operators, lowest precedence first.
     for ops in [

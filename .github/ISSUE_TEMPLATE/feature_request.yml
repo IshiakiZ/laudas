@@ -1,0 +1,46 @@
+name: Feature request
+description: Propose a language feature, stdlib addition, or tooling change
+title: "[feature] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening: check the [PRD](https://github.com/IshiakiZ/laudas/blob/main/prd.md) — it may already be planned. The PRD is the spec; semantic changes will eventually need an RFC (the RFC process formalizes post-Volume I).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you're proposing
+      description: One paragraph. Code samples welcome — show what writing it would look like.
+      render: laudas
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What problem does this solve? What's the workflow today and how does this improve it?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Language semantics (new syntax, new keyword, type-system change)
+        - Standard library (new method, new module function)
+        - Tooling (new `laudas` subcommand, IDE integration, CI hook)
+        - Documentation (PRD clarification, tutorial step, README)
+        - Display format (renderer change)
+        - Verifier (voronin pattern support — use the verifier-limit template instead if it's about a specific limitation message)
+    validations:
+      required: true
+
+  - type: textarea
+    id: prior
+    attributes:
+      label: Prior art
+      description: Languages or tools that have done this before. Helps calibrate scope.

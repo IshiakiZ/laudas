@@ -1,6 +1,6 @@
 [project]
 name = "laudas"
-version = "0.5.3"
+version = "0.5.4"
 description = "Laudas — a verification-first programming language for AI generation"
 readme = "prd.md"
 requires-python = ">=3.10"
