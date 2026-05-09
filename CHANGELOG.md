@@ -4,6 +4,22 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.1] — 2026-05-09 — module-qualified stdlib
+
+### Added
+
+- **Module-qualified standard library calls** — `text.split(s, ",")`, `arith.min(a, b)`, `ledger.range(n)`, `text.to_json(v)`, `archive.read(path)`, etc. The MODULES table is open for extension; see `laudas.py`.
+- **More list methods** — `.at(i)`, `.tail()`, `.take(n)`, `.skip(n)`, `.unique()`, `.sort()`, `.sort_by(fn)`, `.dedupe_by(fn)`, `.reverse()`.
+- **More string methods** — `.contains(sub)`, `.starts_with(p)`, `.ends_with(p)`, `.trim()`, `.split(sep)`.
+- **Escape-sequence decoding** in string literals — `\"`, `\n`, `\t`, `\r`, `\\`, `\0`.
+- **String-aware comma splitter** — commas inside `"..."` no longer split arg lists.
+
+### Demo
+
+[`demo_stdlib.laud`](demo_stdlib.laud) — 7 functions, 14 passing examples, including a CSV-row → record → dedupe → sort → JSON pipeline that exercises records + lambdas + every new module function.
+
+---
+
 ## [v0.5] — 2026-05-09 — first public draft
 
 The first version that's plausibly worth showing other people. The language has a verifier, a renderer, lists, lambdas, records, Python interop, and a standalone binary. Volume I (v1.0) is still 6–12 months out, but the shape is real.

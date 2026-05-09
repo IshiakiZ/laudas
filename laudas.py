@@ -295,26 +295,67 @@ def parse_value(s: str) -> Any:
         return int(s)
     except ValueError:
         pass
-    if s.startswith('"') and s.endswith('"'):
-        return s[1:-1]
+    if len(s) >= 2 and s.startswith('"') and s.endswith('"'):
+        return _decode_string_literal(s[1:-1])
     return s  # fallthrough — opaque token
 
 
+def _decode_string_literal(inner: str) -> str:
+    """Decode common escape sequences (\\n, \\t, \\r, \\\", \\\\) in a string literal."""
+    out: list[str] = []
+    i = 0
+    while i < len(inner):
+        c = inner[i]
+        if c == "\\" and i + 1 < len(inner):
+            nxt = inner[i + 1]
+            if nxt == "n":
+                out.append("\n")
+            elif nxt == "t":
+                out.append("\t")
+            elif nxt == "r":
+                out.append("\r")
+            elif nxt == '"':
+                out.append('"')
+            elif nxt == "\\":
+                out.append("\\")
+            elif nxt == "0":
+                out.append("\0")
+            else:
+                out.append(c)
+                out.append(nxt)
+            i += 2
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
 def split_top_level_commas(s: str) -> list[str]:
-    """Split `s` on commas at top level (outside parens/brackets/braces)."""
+    """Split `s` on commas at top level (outside parens/brackets/braces/strings)."""
     out: list[str] = []
     buf = ""
     depth = 0
-    for c in s:
-        if c in "([{":
-            depth += 1
-        elif c in ")]}":
-            depth -= 1
-        if c == "," and depth == 0:
-            out.append(buf)
-            buf = ""
-        else:
+    in_string = False
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == '"' and (i == 0 or s[i - 1] != "\\"):
+            in_string = not in_string
             buf += c
+            i += 1
+            continue
+        if not in_string:
+            if c in "([{":
+                depth += 1
+            elif c in ")]}":
+                depth -= 1
+            if c == "," and depth == 0:
+                out.append(buf)
+                buf = ""
+                i += 1
+                continue
+        buf += c
+        i += 1
     if buf.strip():
         out.append(buf)
     return out
@@ -355,26 +396,169 @@ def _list_fold(xs: list, init: Any, fn: Any) -> Any:
 TYPE_ALIASES: dict[str, TypeAlias] = {}
 
 
+def _list_at(xs: list, i: int) -> Any:
+    if i < 0 or i >= len(xs):
+        return ("None",)
+    v = xs[i]
+    return v
+
+
+def _list_tail(xs: list) -> list:
+    return xs[1:] if xs else []
+
+
+def _list_take(xs: list, n: int) -> list:
+    return xs[: max(0, n)]
+
+
+def _list_skip(xs: list, n: int) -> list:
+    return xs[max(0, n) :]
+
+
+def _list_unique(xs: list) -> list:
+    seen: list = []
+    for x in xs:
+        if x not in seen:
+            seen.append(x)
+    return seen
+
+
+def _list_sort(xs: list) -> list:
+    try:
+        return sorted(xs)
+    except TypeError:
+        return list(xs)  # un-orderable; return as-is
+
+
+def _list_reverse(xs: list) -> list:
+    return list(reversed(xs))
+
+
+def _list_sort_by(xs: list, key_fn: Any) -> list:
+    if not isinstance(key_fn, LaudasLambda):
+        raise RuntimeFail(".sort_by() needs a lambda, got " + fmt_value(key_fn))
+    return sorted(xs, key=lambda x: key_fn.call(x))
+
+
+def _list_dedupe_by(xs: list, key_fn: Any) -> list:
+    if not isinstance(key_fn, LaudasLambda):
+        raise RuntimeFail(".dedupe_by() needs a lambda, got " + fmt_value(key_fn))
+    seen: list = []
+    out: list = []
+    for x in xs:
+        k = key_fn.call(x)
+        if k not in seen:
+            seen.append(k)
+            out.append(x)
+    return out
+
+
 METHODS: dict[str, dict[str, Any]] = {
     "list": {
-        "length":   lambda xs: len(xs),
-        "sum":      lambda xs: sum(xs),
-        "min":      lambda xs: min(xs) if xs else ("None",),
-        "max":      lambda xs: max(xs) if xs else ("None",),
-        "first":    _list_first,
-        "last":     _list_last,
-        "contains": lambda xs, x: x in xs,
-        "filter":   _list_filter,
-        "map":      _list_map,
-        "fold":     _list_fold,
+        "length":    lambda xs: len(xs),
+        "sum":       lambda xs: sum(xs),
+        "min":       lambda xs: min(xs) if xs else ("None",),
+        "max":       lambda xs: max(xs) if xs else ("None",),
+        "first":     _list_first,
+        "last":      _list_last,
+        "contains":  lambda xs, x: x in xs,
+        "filter":    _list_filter,
+        "map":       _list_map,
+        "fold":      _list_fold,
+        "at":        _list_at,
+        "tail":      _list_tail,
+        "take":      _list_take,
+        "skip":      _list_skip,
+        "unique":    _list_unique,
+        "sort":      _list_sort,
+        "sort_by":   _list_sort_by,
+        "dedupe_by": _list_dedupe_by,
+        "reverse":   _list_reverse,
     },
     "str": {
         "length":   lambda s: len(s),
         "upper":    lambda s: s.upper(),
         "lower":    lambda s: s.lower(),
+        "contains": lambda s, sub: sub in s,
+        "starts_with": lambda s, p: s.startswith(p),
+        "ends_with": lambda s, p: s.endswith(p),
+        "trim":     lambda s: s.strip(),
+        "split":    lambda s, sep: s.split(sep),
     },
     "int": {
         "abs":      lambda i: abs(i),
+    },
+}
+
+
+# ---------- Module-qualified standard library ----------
+#
+# Functions called as MODULE.FUNC(args). Resolved by eval_expr before falling
+# through to value-method dispatch.
+
+def _text_parse_csv(text: str) -> list:
+    """Parse CSV text into list of list of str. Handles only simple CSV (no quoted commas)."""
+    return [line.split(",") for line in text.split("\n") if line]
+
+
+def _text_to_json(v: Any) -> str:
+    """Best-effort JSON serialization of a Laudas value."""
+    return json.dumps(_to_jsonable(v), separators=(",", ":"))
+
+
+def _to_jsonable(v: Any) -> Any:
+    if isinstance(v, tuple):
+        if v[0] == "None":
+            return None
+        if v[0] == "Some":
+            return _to_jsonable(v[1])
+    if isinstance(v, list):
+        return [_to_jsonable(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _to_jsonable(val) for k, val in v.items() if not k.startswith("__")}
+    return v
+
+
+def _archive_read(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def _archive_write(path: str, content: str) -> Any:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return ("None",)
+
+
+def _ledger_range(n: int) -> list:
+    return list(range(n))
+
+
+MODULES: dict[str, dict[str, Any]] = {
+    "text": {
+        "split":    lambda s, sep: s.split(sep),
+        "join":     lambda lst, sep: sep.join(lst),
+        "contains": lambda s, sub: sub in s,
+        "length":   lambda s: len(s),
+        "upper":    lambda s: s.upper(),
+        "lower":    lambda s: s.lower(),
+        "trim":     lambda s: s.strip(),
+        "parse_csv": _text_parse_csv,
+        "to_json":  _text_to_json,
+    },
+    "arith": {
+        "abs":      lambda x: abs(x),
+        "min":      lambda a, b: min(a, b),
+        "max":      lambda a, b: max(a, b),
+        "pow":      lambda a, b: a ** b,
+    },
+    "ledger": {
+        "range":    _ledger_range,
+        "length":   lambda xs: len(xs),
+    },
+    "archive": {
+        "read":     _archive_read,
+        "write":    _archive_write,
     },
 }
 
@@ -603,8 +787,23 @@ def eval_expr(expr: str, env: dict[str, Any]) -> Any:
     pm = try_match_postfix_method(s)
     if pm is not None:
         prefix, method, args_str = pm
-        obj = eval_expr(prefix, env)
+        prefix_stripped = prefix.strip()
         args = [eval_expr(a, env) for a in split_top_level_commas(args_str)] if args_str.strip() else []
+        # 4a. Module-qualified call (no value evaluation of the prefix)
+        if prefix_stripped in MODULES:
+            mod = MODULES[prefix_stripped]
+            if method not in mod:
+                raise RuntimeFail(
+                    f"module {prefix_stripped!r} has no function {method!r} (available: {sorted(mod.keys())})"
+                )
+            try:
+                return mod[method](*args)
+            except RuntimeFail:
+                raise
+            except Exception as e:
+                raise RuntimeFail(f"{prefix_stripped}.{method}() raised: {e}")
+        # 4b. Value method dispatch
+        obj = eval_expr(prefix, env)
         return dispatch_method(obj, method, args)
 
     # 4b. Postfix field access: PREFIX.FIELD (no parens)
@@ -661,7 +860,7 @@ def eval_expr(expr: str, env: dict[str, Any]) -> Any:
 
     # 10. String literal
     if len(s) >= 2 and s.startswith('"') and s.endswith('"'):
-        return s[1:-1]
+        return _decode_string_literal(s[1:-1])
 
     # 11. Bare identifier
     if re.match(r"^[A-Za-z_]\w*$", s):

@@ -1,0 +1,108 @@
+; v0.5 demo — module-qualified stdlib (`text`, `arith`, `ledger`, `archive`)
+; Run:  laudas demo_stdlib.laud
+
+
+type UserRecord { name: str, email: str, role: str }
+
+
+; --- 1. text.split + .unique() chain -----------------------
+
+fn unique_words
+vis appearing
+eff pure
+in s: str
+out list<str>
+ex unique_words("the,cat,the,dog,cat") == ["the", "cat", "dog"]
+ex unique_words("solo") == ["solo"]
+do
+return text.split(s, ",").unique()
+end
+
+
+; --- 2. text.split + .map + .filter chain ------------------
+
+fn long_words
+vis appearing
+eff pure
+in s: str
+out list<str>
+ex long_words("hi,laudas,is,verification,first") == ["laudas", "verification"]
+do
+return text.split(s, ",").filter(w -> w.length() > 5)
+end
+
+
+; --- 3. arith stdlib ---------------------------------------
+
+fn clamp
+vis appearing
+eff pure
+in x: int
+in lo: int
+in hi: int
+out int
+ex clamp(5, 0, 10) == 5
+ex clamp(-3, 0, 10) == 0
+ex clamp(99, 0, 10) == 10
+do
+return arith.min(arith.max(x, lo), hi)
+end
+
+
+; --- 4. ledger.range + chain -------------------------------
+
+fn sum_to_n
+vis appearing
+eff pure
+in n: int
+out int
+ex sum_to_n(0) == 0
+ex sum_to_n(1) == 0
+ex sum_to_n(5) == 10
+ex sum_to_n(10) == 45
+do
+return ledger.range(n).sum()
+end
+
+
+; --- 5. CSV-ish processing — the real-world demo -----------
+; Input: a comma-separated triple "name,email,role" — pretend this
+; came from one row of a CSV. Output: a UserRecord with cleaned fields.
+
+fn parse_user_row
+vis appearing
+eff pure
+in row: str
+out UserRecord
+ex parse_user_row("Mira,mira@laudas.dev,engineer") == UserRecord { name: "Mira", email: "mira@laudas.dev", role: "engineer" }
+ex parse_user_row("Dara,dara@laudas.dev,captain") == UserRecord { name: "Dara", email: "dara@laudas.dev", role: "captain" }
+do
+let parts = text.split(row, ",")
+return UserRecord { name: parts.at(0), email: parts.at(1), role: parts.at(2) }
+end
+
+
+; --- 6. dedupe by lowercased field on a list of records ----
+
+fn dedupe_users_by_email
+vis appearing
+eff pure
+in users: list<UserRecord>
+out list<UserRecord>
+ex dedupe_users_by_email([UserRecord { name: "Mira", email: "Mira@Laudas.Dev", role: "engineer" }, UserRecord { name: "Mira2", email: "mira@laudas.dev", role: "engineer" }]) == [UserRecord { name: "Mira", email: "Mira@Laudas.Dev", role: "engineer" }]
+do
+return users.dedupe_by(u -> u.email.lower())
+end
+
+
+; --- 7. Sort users by role, then output JSON ---------------
+
+fn users_to_json
+vis appearing
+eff pure
+in users: list<UserRecord>
+out str
+ex users_to_json([UserRecord { name: "Mira", email: "m@l.dev", role: "engineer" }, UserRecord { name: "Dara", email: "d@l.dev", role: "captain" }]) == "[{\"name\":\"Dara\",\"email\":\"d@l.dev\",\"role\":\"captain\"},{\"name\":\"Mira\",\"email\":\"m@l.dev\",\"role\":\"engineer\"}]"
+do
+return text.to_json(users.sort_by(u -> u.role))
+end
