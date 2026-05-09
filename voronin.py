@@ -55,6 +55,20 @@ class SymEnv:
 
 # ---------- Type encoding ----------
 
+def _get_type_aliases() -> dict:
+    """Look up `laudas.TYPE_ALIASES` regardless of whether laudas is loaded as
+    the `laudas` module (console-script entry-point) or as `__main__` (when
+    invoked via `python laudas.py FILE.laud` directly)."""
+    import sys
+    for mod_name in ("laudas", "__main__"):
+        mod = sys.modules.get(mod_name)
+        if mod is not None and hasattr(mod, "TYPE_ALIASES"):
+            ta = mod.TYPE_ALIASES
+            if ta:
+                return ta
+    return {}
+
+
 def make_input_sym(p: Param) -> Any:
     base = p.type.base
     if base == "int":
@@ -66,13 +80,9 @@ def make_input_sym(p: Param) -> Any:
     if base == "int?":
         return z3.Const(p.name, IntOpt)
     # Record types: build an opaque Z3 datatype with the declared fields.
-    # We look the type up via the global TYPE_ALIASES registry from laudas.
-    try:
-        from laudas import TYPE_ALIASES
-    except ImportError:
-        TYPE_ALIASES = {}
-    if base in TYPE_ALIASES:
-        return _make_record_sym(p.name, base, TYPE_ALIASES[base])
+    type_aliases = _get_type_aliases()
+    if base in type_aliases:
+        return _make_record_sym(p.name, base, type_aliases[base])
     raise NotSupported(f"unsupported input type: {base}")
 
 
