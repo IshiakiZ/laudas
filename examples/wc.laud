@@ -1,0 +1,39 @@
+; wc.laud — count lines, words, and characters from stdin.
+; The classic Unix utility, in Laudas.
+;
+; Run:
+;   Get-Content somefile.txt | laudas run examples/wc.laud
+;   cat somefile.txt | laudas run examples/wc.laud
+
+
+fn count_words_in_line
+vis appearing
+eff pure
+in line: str
+out int
+ex count_words_in_line("hello world") == 2
+ex count_words_in_line("") == 0
+ex count_words_in_line("solo") == 1
+ex count_words_in_line("a  b  c") == 3
+ens result >= 0
+do
+return text.split(line, " ").filter(w -> w.length() > 0).length()
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n").filter(l -> l.length() > 0)
+let words = lines.map(l -> count_words_in_line(l)).sum()
+io.print("lines: ")
+io.println(lines.length())
+io.print("words: ")
+io.println(words)
+io.print("chars: ")
+io.println(raw.length())
+return 0
+end

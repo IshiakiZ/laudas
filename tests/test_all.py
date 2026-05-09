@@ -40,6 +40,7 @@ PASS_FILES = [
     "demo_hello.laud",
     "demo_greet.laud",
     "examples/csv2json.laud",
+    "examples/wc.laud",
 ]
 
 # Intentionally-broken demos that MUST fail (CI flags it as a regression
