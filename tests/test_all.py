@@ -57,6 +57,7 @@ PASS_FILES = [
     "examples/grep.laud",
     "examples/cat.laud",
     "examples/calc_rpn.laud",
+    "examples/minesweeper.laud",
     "tutorial/07_modules.laud",
     "tutorial/08_ffi.laud",
 ]

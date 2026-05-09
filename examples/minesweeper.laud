@@ -1,0 +1,349 @@
+; minesweeper.laud — Minesweeper, in Laudas.
+;
+; A 5×5 board with 4 mines at positions [0, 7, 13, 22] (deterministic for
+; the demo). Reads a sequence of moves from stdin, one per line:
+;
+;   r ROW COL    reveal a cell
+;   f ROW COL    flag/unflag a cell
+;
+; After processing all moves, renders the final board and the win/lose state.
+;
+; Run:
+;   "r 1 1`nr 2 2`nr 4 4`nf 0 0" | laudas run examples/minesweeper.laud
+;
+; Stress-tests: records, list method chains, fold, multi-arg lambdas, cross-
+; function calls, multiple file references, runtime IO. All without mutation.
+
+
+type Cell { mine: bool, revealed: bool, flagged: bool, adjacent: int }
+type Board { width: int, height: int, cells: list<Cell> }
+type Move { action: str, row: int, col: int }
+
+
+; ============================================================
+;  Cell + Board constructors
+; ============================================================
+
+fn empty_cell
+vis appearing
+eff pure
+out Cell
+ex empty_cell() == Cell { mine: false, revealed: false, flagged: false, adjacent: 0 }
+do
+return Cell { mine: false, revealed: false, flagged: false, adjacent: 0 }
+end
+
+
+fn make_empty_board
+vis appearing
+eff pure
+in w: int
+in h: int
+out Board
+do
+return Board { width: w, height: h, cells: ledger.range(w * h).map(i -> empty_cell()) }
+end
+
+
+; ============================================================
+;  Indexing — cells stored as flat list, indexed by row*width + col
+; ============================================================
+
+fn cell_at
+vis appearing
+eff pure
+in b: Board
+in row: int
+in col: int
+out Cell
+do
+return b.cells.at(row * b.width + col)
+end
+
+
+fn set_cell_at
+vis appearing
+eff pure
+in b: Board
+in row: int
+in col: int
+in cell: Cell
+out Board
+do
+let idx = row * b.width + col
+let new_cells = b.cells.take(idx) + [cell] + b.cells.skip(idx + 1)
+return Board { width: b.width, height: b.height, cells: new_cells }
+end
+
+
+; ============================================================
+;  Mine placement
+; ============================================================
+
+fn place_mine_at
+vis appearing
+eff pure
+in b: Board
+in row: int
+in col: int
+out Board
+do
+let c = cell_at(b, row, col)
+return set_cell_at(b, row, col, Cell { mine: true, revealed: c.revealed, flagged: c.flagged, adjacent: c.adjacent })
+end
+
+
+fn place_mines
+vis appearing
+eff pure
+in b: Board
+in positions: list<int>
+out Board
+do
+return positions.fold(b, (board, idx) -> place_mine_at(board, idx / b.width, idx % b.width))
+end
+
+
+; ============================================================
+;  Adjacent-mine count (8 neighbors per cell)
+; ============================================================
+
+fn neighbor_mine
+vis appearing
+eff pure
+in b: Board
+in row: int
+in col: int
+in dr: int
+in dc: int
+out int
+do
+let nr = row + dr
+let nc = col + dc
+if dr == 0 && dc == 0 { return 0 }
+if nr < 0 { return 0 }
+if nr >= b.height { return 0 }
+if nc < 0 { return 0 }
+if nc >= b.width { return 0 }
+if cell_at(b, nr, nc).mine { return 1 }
+return 0
+end
+
+
+fn count_neighbors
+vis appearing
+eff pure
+in b: Board
+in row: int
+in col: int
+out int
+do
+return neighbor_mine(b, row, col, -1, -1)
+  + neighbor_mine(b, row, col, -1, 0)
+  + neighbor_mine(b, row, col, -1, 1)
+  + neighbor_mine(b, row, col, 0, -1)
+  + neighbor_mine(b, row, col, 0, 1)
+  + neighbor_mine(b, row, col, 1, -1)
+  + neighbor_mine(b, row, col, 1, 0)
+  + neighbor_mine(b, row, col, 1, 1)
+end
+
+
+fn fill_adj_at
+vis appearing
+eff pure
+in b: Board
+in idx: int
+out Board
+do
+let row = idx / b.width
+let col = idx % b.width
+let c = cell_at(b, row, col)
+let n = count_neighbors(b, row, col)
+return set_cell_at(b, row, col, Cell { mine: c.mine, revealed: c.revealed, flagged: c.flagged, adjacent: n })
+end
+
+
+fn fill_all_adjacents
+vis appearing
+eff pure
+in b: Board
+out Board
+do
+return ledger.range(b.height * b.width).fold(b, (board, idx) -> fill_adj_at(board, idx))
+end
+
+
+; ============================================================
+;  Player actions
+; ============================================================
+
+fn reveal_at
+vis appearing
+eff pure
+in b: Board
+in row: int
+in col: int
+out Board
+do
+let c = cell_at(b, row, col)
+if c.revealed { return b }
+return set_cell_at(b, row, col, Cell { mine: c.mine, revealed: true, flagged: c.flagged, adjacent: c.adjacent })
+end
+
+
+fn flag_at
+vis appearing
+eff pure
+in b: Board
+in row: int
+in col: int
+out Board
+do
+let c = cell_at(b, row, col)
+return set_cell_at(b, row, col, Cell { mine: c.mine, revealed: c.revealed, flagged: c.flagged == false, adjacent: c.adjacent })
+end
+
+
+fn apply_move
+vis appearing
+eff pure
+in b: Board
+in m: Move
+out Board
+do
+if m.action == "r" { return reveal_at(b, m.row, m.col) }
+if m.action == "f" { return flag_at(b, m.row, m.col) }
+return b
+end
+
+
+; ============================================================
+;  Game state
+; ============================================================
+
+fn is_lost
+vis appearing
+eff pure
+in b: Board
+out bool
+do
+return b.cells.filter(c -> c.mine && c.revealed).is_empty() == false
+end
+
+
+fn is_won
+vis appearing
+eff pure
+in b: Board
+out bool
+do
+let safe = b.cells.filter(c -> c.mine == false)
+let revealed_safe = safe.filter(c -> c.revealed)
+return safe.length() == revealed_safe.length()
+end
+
+
+; ============================================================
+;  Rendering
+; ============================================================
+
+fn render_cell
+vis appearing
+eff pure
+in c: Cell
+out str
+ex render_cell(Cell { mine: false, revealed: false, flagged: false, adjacent: 0 }) == "·"
+ex render_cell(Cell { mine: false, revealed: true, flagged: false, adjacent: 0 }) == " "
+ex render_cell(Cell { mine: false, revealed: true, flagged: false, adjacent: 3 }) == "3"
+ex render_cell(Cell { mine: true, revealed: true, flagged: false, adjacent: 0 }) == "*"
+ex render_cell(Cell { mine: false, revealed: false, flagged: true, adjacent: 0 }) == "F"
+do
+if c.flagged { return "F" }
+if c.revealed == false { return "·" }
+if c.mine { return "*" }
+if c.adjacent == 0 { return " " }
+return text.from_int(c.adjacent)
+end
+
+
+fn render_row
+vis appearing
+eff pure
+in b: Board
+in row: int
+out str
+do
+return text.join(ledger.range(b.width).map(c -> render_cell(cell_at(b, row, c))), " ")
+end
+
+
+fn render_board
+vis appearing
+eff pure
+in b: Board
+out str
+do
+return text.join(ledger.range(b.height).map(r -> render_row(b, r)), "\n")
+end
+
+
+; ============================================================
+;  Command parsing
+; ============================================================
+
+fn parse_move
+vis appearing
+eff pure
+in line: str
+out Move
+ex parse_move("r 1 2") == Move { action: "r", row: 1, col: 2 }
+ex parse_move("f 0 3") == Move { action: "f", row: 0, col: 3 }
+do
+let parts = text.split(line, " ")
+return Move { action: parts.at(0), row: text.to_int(parts.at(1)), col: text.to_int(parts.at(2)) }
+end
+
+
+; ============================================================
+;  Main
+; ============================================================
+
+fn initial_board
+vis appearing
+eff pure
+out Board
+do
+let empty = make_empty_board(5, 5)
+let with_mines = place_mines(empty, [0, 7, 13, 22])
+return fill_all_adjacents(with_mines)
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n").filter(l -> l.length() > 0)
+let moves = lines.map(l -> parse_move(l))
+let final = moves.fold(initial_board(), (b, m) -> apply_move(b, m))
+io.println("══════════════════════════════════════")
+io.println("  Minesweeper  ·  5×5  ·  4 mines")
+io.println("──────────────────────────────────────")
+io.println(render_board(final))
+io.println("──────────────────────────────────────")
+if is_lost(final) {
+  io.println("  BOOM. You revealed a mine.")
+  return 1
+}
+if is_won(final) {
+  io.println("  You won! All safe cells revealed.")
+  return 0
+}
+io.println("  Game in progress...")
+io.println("  Legend: · hidden   F flagged   * mine   N=adjacent count")
+io.println("══════════════════════════════════════")
+return 0
+end

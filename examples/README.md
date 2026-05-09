@@ -21,6 +21,7 @@ These are **real**, not toys. They use real Python under the hood for things Lau
 | [`grep.laud`](grep.laud) | 16 | print stdin lines containing PATTERN | `cat file.txt \| laudas run grep.laud TODO` |
 | [`cat.laud`](cat.laud) | 9 | echo stdin to stdout | `cat file \| laudas run cat.laud` |
 | [`calc_rpn.laud`](calc_rpn.laud) | 49 | reverse-Polish calculator | `echo "3 4 + 2 *" \| laudas run calc_rpn.laud` |
+| [`minesweeper.laud`](minesweeper.laud) | 230 | **Minesweeper** — full game, 5×5 board, fold-based move loop | `"r 0 4`nf 0 0" \| laudas run minesweeper.laud` |
 
 ## They compose
 
