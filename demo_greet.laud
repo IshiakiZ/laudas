@@ -1,0 +1,20 @@
+; v0.5.5 — CLI tool that takes args and prints a personalized greeting.
+;
+; Run:  laudas run demo_greet.laud Pearce Mira Dara
+
+
+fn main
+vis appearing
+eff io
+in args: list<str>
+out int
+do
+if args.length() == 0 {
+  io.eprintln("usage: laudas run demo_greet.laud NAME [NAME...]")
+  return 64
+}
+io.println(text.join(["Welcome aboard, "], ""))
+io.println(args.fold("", (acc, name) -> acc + "  " + name + "\n"))
+io.println("— the Laudan transit office")
+return 0
+end

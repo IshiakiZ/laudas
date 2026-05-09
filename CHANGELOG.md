@@ -4,6 +4,27 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.5] — 2026-05-09 — Laudas programs are runnable
+
+Laudas programs are now actually executable from the command line — not just spec-checked. A `fn main` is the entry point; `laudas run FILE.laud [ARGS...]` calls it.
+
+### Added — language
+
+- **`io` module** — `io.println(s)`, `io.print(s)`, `io.eprintln(s)`, `io.read_line()`. The first three return `None` (called for the side effect); read_line returns the trimmed line.
+- **Expression-statement support** — body lines can be bare expressions called for their side effects. `io.println("hi")` on its own line works; the result is discarded.
+
+### Added — toolchain
+
+- **`laudas run FILE.laud [ARGS...]`** — execute the file's `main` function. `main` may take zero args, or one `args: list<str>` parameter that receives the CLI arguments. The int return value becomes the process exit code.
+- Help text in `laudas --help` updated.
+
+### Demos
+
+- [`demo_hello.laud`](demo_hello.laud) — minimal hello world.
+- [`demo_greet.laud`](demo_greet.laud) — personalized greeter that takes names from the command line, validates argc, exits 64 with usage on misuse.
+
+---
+
 ## [v0.5.4] — 2026-05-09 — multi-arg lambdas + community plumbing
 
 ### Added — language

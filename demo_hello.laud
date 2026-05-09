@@ -1,0 +1,18 @@
+; v0.5.5 — Laudas programs as actually-runnable CLI tools.
+;
+; Run:  laudas run demo_hello.laud
+;
+; The `run` subcommand looks for `fn main`, calls it, and uses its
+; int return value as the process exit code. `main` may take no args,
+; or one `args: list<str>` parameter that receives the CLI arguments.
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+io.println("Hello, Laudas!")
+io.println("Volume I begins.")
+return 0
+end

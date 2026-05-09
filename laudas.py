@@ -584,7 +584,33 @@ def _ledger_range(n: int) -> list:
     return list(range(n))
 
 
+def _io_print(s: Any) -> Any:
+    sys.stdout.write(str(s) if not isinstance(s, str) else s)
+    return ("None",)
+
+
+def _io_println(s: Any) -> Any:
+    sys.stdout.write((str(s) if not isinstance(s, str) else s) + "\n")
+    return ("None",)
+
+
+def _io_eprintln(s: Any) -> Any:
+    sys.stderr.write((str(s) if not isinstance(s, str) else s) + "\n")
+    return ("None",)
+
+
+def _io_read_line() -> str:
+    line = sys.stdin.readline()
+    return line.rstrip("\n")
+
+
 MODULES: dict[str, dict[str, Any]] = {
+    "io": {
+        "print":     _io_print,
+        "println":   _io_println,
+        "eprintln":  _io_eprintln,
+        "read_line": _io_read_line,
+    },
     "text": {
         "split":    lambda s, sep: s.split(sep),
         "join":     lambda lst, sep: sep.join(lst),
@@ -783,7 +809,10 @@ def interp_stmt(stmt: str, env: dict[str, Any]) -> Any:
         name, expr = m.groups()
         env[name] = eval_expr(expr.strip(), env)
         return _NO_RETURN
-    return ("error", f"unsupported statement: {s!r}")
+    # Otherwise: treat as an expression statement (call for side effects).
+    # The result is discarded; runtime errors propagate.
+    eval_expr(s, env)
+    return _NO_RETURN
 
 
 def interp_if(s: str, env: dict[str, Any]) -> Any:
@@ -1654,6 +1683,74 @@ def request_body_file(path: str, output_path: Optional[str] = None) -> int:
     return 0
 
 
+# ---------- `laudas run` — execute the program's `main` function ----------
+
+def run_program(path: str, program_args: list[str]) -> int:
+    """Load FILE.laud, find a `main` function, call it.
+
+    `main` may take 0 args, or one `args: list<str>` arg (which receives
+    `program_args`). Its return value is interpreted as the process exit code
+    if it's an int, else 0.
+    """
+    try:
+        fns, types = parse_file(path)
+    except ParseError as e:
+        emit_diagnostic({
+            "error": "parse-error",
+            "location": f"{path}:{e.line}",
+            "function": "(file)",
+            "found": e.msg,
+            "suggestions": [
+                {"rank": 1, "fix": "check slot order: fn, vis, for?, eff, in*, out, ex*, req*, ens*, prose?, do, body, end"},
+            ],
+            "explanation": str(e.msg),
+        })
+        return 2
+
+    TYPE_ALIASES.clear()
+    FUNCTIONS.clear()
+    for ta in types:
+        TYPE_ALIASES[ta.name] = ta
+    for fn in fns:
+        FUNCTIONS[fn.name] = fn
+
+    if "main" not in FUNCTIONS:
+        print(f"error: {path} defines no `main` function", file=sys.stderr)
+        print("       to make this file runnable, add:", file=sys.stderr)
+        print("           fn main", file=sys.stderr)
+        print("           vis appearing", file=sys.stderr)
+        print("           eff io", file=sys.stderr)
+        print("           out int", file=sys.stderr)
+        print("           do", file=sys.stderr)
+        print("           io.println(\"hello\")", file=sys.stderr)
+        print("           return 0", file=sys.stderr)
+        print("           end", file=sys.stderr)
+        return 64
+
+    main_fn = FUNCTIONS["main"]
+    # Accept main()  OR  main(args: list<str>)
+    if len(main_fn.ins) == 0:
+        args: list[Any] = []
+    elif len(main_fn.ins) == 1:
+        args = [list(program_args)]
+    else:
+        print(
+            f"error: `main` takes 0 or 1 arg (got {len(main_fn.ins)})",
+            file=sys.stderr,
+        )
+        return 64
+
+    try:
+        result = run_body(main_fn, args)
+    except RuntimeFail as rf:
+        print(f"runtime panic in main: {rf.message}", file=sys.stderr)
+        return 1
+
+    if isinstance(result, int) and not isinstance(result, bool):
+        return result
+    return 0
+
+
 # ---------- CLI ----------
 
 def check_file(path: str) -> int:
@@ -1751,6 +1848,7 @@ def main() -> int:
         print("usage:", file=sys.stderr)
         print("  laudas FILE.laud                  parse + run examples + verify", file=sys.stderr)
         print("  laudas --show FILE.laud           render as Laudan archive entries", file=sys.stderr)
+        print("  laudas run FILE.laud [ARGS...]    execute the file's `main` function", file=sys.stderr)
         print("  laudas request-body FILE.laud     fill empty `do` blocks via Claude", file=sys.stderr)
         print("                                    (requires ANTHROPIC_API_KEY)", file=sys.stderr)
         return 0 if args and args[0] in ("-h", "--help") else 64
@@ -1759,6 +1857,11 @@ def main() -> int:
             print("usage: laudas --show FILE.laud", file=sys.stderr)
             return 64
         return show_file(args[1])
+    if args[0] == "run":
+        if len(args) < 2:
+            print("usage: laudas run FILE.laud [ARGS...]", file=sys.stderr)
+            return 64
+        return run_program(args[1], args[2:])
     if args[0] == "request-body":
         if len(args) < 2:
             print("usage: laudas request-body FILE.laud [-o OUTPUT.laud]", file=sys.stderr)
@@ -1772,7 +1875,7 @@ def main() -> int:
             out = args[o_idx + 1]
         return request_body_file(args[1], out)
     if len(args) != 1:
-        print("usage: laudas [--show | request-body] FILE.laud", file=sys.stderr)
+        print("usage: laudas [--show | run | request-body] FILE.laud", file=sys.stderr)
         return 64
     return check_file(args[0])
 
