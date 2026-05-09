@@ -4,6 +4,29 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.6] — 2026-05-09 — first real CLI tool
+
+### Added — language
+
+- **`io.read_stdin()`** — reads all of stdin as a string. Pairs with `io.println` and the existing list / text / record machinery to make Unix-pipe-style tools possible.
+
+### Added — examples
+
+- **[`examples/csv2json.laud`](examples/csv2json.laud)** — first non-toy CLI tool written in Laudas. Reads CSV text from stdin, drops the header, parses each row into a `Crew` record, emits JSON. ~20 lines. Real working tool, not a demo. Pipe a file in:
+
+  ```
+  Get-Content examples/crew.csv | laudas run examples/csv2json.laud
+  ```
+
+  Outputs:
+  ```json
+  [{"name":"Mira","role":"engineer","ship":"Voronin"},{"name":"Dara","role":"captain","ship":"Osei"},{"name":"Cass","role":"navigator","ship":"Telles"}]
+  ```
+
+  The `parse_row` function has its own `ex` slots, so verification still runs against it normally with `laudas examples/csv2json.laud` (no piping).
+
+---
+
 ## [v0.5.5] — 2026-05-09 — Laudas programs are runnable
 
 Laudas programs are now actually executable from the command line — not just spec-checked. A `fn main` is the entry point; `laudas run FILE.laud [ARGS...]` calls it.

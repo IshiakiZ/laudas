@@ -604,12 +604,17 @@ def _io_read_line() -> str:
     return line.rstrip("\n")
 
 
+def _io_read_stdin() -> str:
+    return sys.stdin.read()
+
+
 MODULES: dict[str, dict[str, Any]] = {
     "io": {
-        "print":     _io_print,
-        "println":   _io_println,
-        "eprintln":  _io_eprintln,
-        "read_line": _io_read_line,
+        "print":      _io_print,
+        "println":    _io_println,
+        "eprintln":   _io_eprintln,
+        "read_line":  _io_read_line,
+        "read_stdin": _io_read_stdin,
     },
     "text": {
         "split":    lambda s, sep: s.split(sep),

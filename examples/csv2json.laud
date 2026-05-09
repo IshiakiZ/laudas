@@ -1,0 +1,37 @@
+; csv2json — a working CLI tool, ~20 lines of Laudas.
+;
+; Read CSV text from stdin, drop the header row, parse each non-empty row
+; into a Crew record, emit pretty JSON to stdout.
+;
+; Run:
+;   Get-Content examples/crew.csv | laudas run examples/csv2json.laud   (PowerShell)
+;   cat examples/crew.csv | laudas run examples/csv2json.laud           (bash)
+
+
+type Crew { name: str, role: str, ship: str }
+
+
+fn parse_row
+vis appearing
+eff pure
+in row: str
+out Crew
+ex parse_row("Mira,engineer,Voronin") == Crew { name: "Mira", role: "engineer", ship: "Voronin" }
+ex parse_row("Dara,captain,Osei") == Crew { name: "Dara", role: "captain", ship: "Osei" }
+do
+let parts = text.split(row, ",")
+return Crew { name: parts.at(0), role: parts.at(1), ship: parts.at(2) }
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let rows = text.split(raw, "\n")
+let crew = rows.skip(1).filter(r -> r.length() > 0).map(r -> parse_row(r))
+io.println(text.to_json(crew))
+return 0
+end
