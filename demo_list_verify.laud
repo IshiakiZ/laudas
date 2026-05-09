@@ -1,0 +1,35 @@
+; v0.5.9 demo — voronin now models `list<T>` inputs as Z3 Sequence sort,
+; so `xs.length()` is symbolically verifiable.
+;
+; Run:  laudas demo_list_verify.laud
+;
+; Both functions get full Z3 verification — proven for ALL list<int> inputs.
+
+
+fn double_length
+vis appearing
+eff pure
+in xs: list<int>
+out int
+ex double_length([1, 2, 3]) == 6
+ex double_length([]) == 0
+ex double_length([42]) == 2
+ens result >= 0
+ens result == xs.length() * 2
+do
+return xs.length() * 2
+end
+
+
+fn always_nonneg_length
+vis appearing
+eff pure
+in xs: list<str>
+out int
+ex always_nonneg_length(["a", "b", "c"]) == 3
+ex always_nonneg_length([]) == 0
+ens result >= 0
+ens result == xs.length()
+do
+return xs.length()
+end

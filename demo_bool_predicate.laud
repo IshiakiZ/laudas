@@ -1,0 +1,35 @@
+; v0.5.9 demo — voronin verifies bool-returning predicates over records.
+;
+; The body is a compound boolean expression over string-field lengths;
+; the ens asserts result equals that same expression. Z3 should prove the
+; equivalence trivially.
+
+
+type User { name: str, email: str, role: str }
+
+
+fn is_valid
+vis appearing
+eff pure
+in u: User
+out bool
+ex is_valid(User { name: "Mira", email: "m@x.com", role: "engineer" }) == true
+ex is_valid(User { name: "", email: "x@y.com", role: "r" }) == false
+ex is_valid(User { name: "Mira", email: "no-at", role: "r" }) == true
+ens result == (u.name.length() > 0 && u.email.length() > 0 && u.role.length() > 0)
+do
+return u.name.length() > 0 && u.email.length() > 0 && u.role.length() > 0
+end
+
+
+fn has_long_name
+vis appearing
+eff pure
+in u: User
+out bool
+ex has_long_name(User { name: "Mira", email: "m", role: "r" }) == true
+ex has_long_name(User { name: "Q", email: "m", role: "r" }) == false
+ens result == (u.name.length() >= 4)
+do
+return u.name.length() >= 4
+end

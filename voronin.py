@@ -79,6 +79,16 @@ def make_input_sym(p: Param) -> Any:
         return z3.String(p.name)
     if base == "int?":
         return z3.Const(p.name, IntOpt)
+    # list<T> — model as Z3 Sequence sort. Lets ens reason about .length().
+    if base.startswith("list<") and base.endswith(">"):
+        inner = base[5:-1].strip()
+        elem_sort = {
+            "int": z3.IntSort(),
+            "bool": z3.BoolSort(),
+            "str": z3.StringSort(),
+        }.get(inner)
+        if elem_sort is not None:
+            return z3.Const(p.name, z3.SeqSort(elem_sort))
     # Record types: build an opaque Z3 datatype with the declared fields.
     type_aliases = _get_type_aliases()
     if base in type_aliases:
@@ -213,10 +223,11 @@ def sym_eval(expr: str, env: SymEnv) -> Any:
             right = sym_eval(right_str, env)
             return _apply(op, left, right)
 
-    # String methods: ANY_STRING_EXPR.length() / .upper() / .lower()
+    # String / Seq methods: ANY_STRING_OR_LIST_EXPR.length() / .upper() / .lower()
     # Placed AFTER binary ops so `result == s.length()` parses as the equality,
-    # not as `(result == s).length()`. The prefix is recursively evaluated, so
-    # chains like `s.upper().length()` work.
+    # not as `(result == s).length()`. Prefix recursively evaluated, so chains
+    # like `s.upper().length()` work. `.length()` is defined for Z3 Strings AND
+    # for any Z3 Seq sort (which we use to model `list<T>` inputs).
     for suffix in (".length()", ".upper()", ".lower()"):
         if s.endswith(suffix):
             prefix_str = s[: -len(suffix)]
@@ -225,13 +236,21 @@ def sym_eval(expr: str, env: SymEnv) -> Any:
                     prefix_val = sym_eval(prefix_str, env)
                 except NotSupported:
                     continue
-                if hasattr(prefix_val, "sort") and str(prefix_val.sort()) == "String":
-                    if suffix == ".length()":
+                if not hasattr(prefix_val, "sort"):
+                    continue
+                if suffix == ".length()":
+                    # Try z3.Length — works on Strings and any Seq sort. If the
+                    # operand isn't sequence-shaped, Z3 raises and we fall through.
+                    try:
                         return z3.Length(prefix_val)
-                    # upper/lower: opaque string-to-string function (Z3 doesn't model case folding)
-                    name = "_upper" if suffix == ".upper()" else "_lower"
-                    f = z3.Function(name, z3.StringSort(), z3.StringSort())
-                    return f(prefix_val)
+                    except (z3.Z3Exception, TypeError):
+                        continue
+                else:
+                    # upper/lower only meaningful on String. Opaque length-preserving fn.
+                    if str(prefix_val.sort()) == "String":
+                        name = "_upper" if suffix == ".upper()" else "_lower"
+                        f = z3.Function(name, z3.StringSort(), z3.StringSort())
+                        return f(prefix_val)
 
     # Bare identifier
     if re.match(r"^[A-Za-z_]\w*$", s):
