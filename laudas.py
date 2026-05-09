@@ -651,6 +651,7 @@ MODULES: dict[str, dict[str, Any]] = {
         "to_json_pretty": _text_to_json_pretty,
         "to_int":         _text_to_int,
         "from_int":       _text_from_int,
+        "repeat":         lambda s, n: s * max(0, n),
     },
     "arith": {
         "abs":      lambda x: abs(x),

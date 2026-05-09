@@ -47,6 +47,7 @@ PASS_FILES = [
     "examples/head.laud",
     "examples/tail.laud",
     "examples/uniq.laud",
+    "examples/bars.laud",
 ]
 
 # Intentionally-broken demos that MUST fail (CI flags it as a regression

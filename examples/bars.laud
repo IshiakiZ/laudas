@@ -1,0 +1,40 @@
+; bars.laud — render labeled counts as horizontal ASCII bar charts.
+;
+; Stdin format (one entry per line):
+;   LABEL COUNT
+;
+; Output:
+;   LABEL: ████████ COUNT
+;
+; Run:
+;   echo "Mira 12`nDara 8`nCass 5" | laudas run examples/bars.laud  (PowerShell)
+;   printf "Mira 12\nDara 8\nCass 5\n" | laudas run examples/bars.laud  (bash)
+
+
+fn render_bar
+vis appearing
+eff pure
+in line: str
+out str
+ex render_bar("Mira 12") == "Mira: ████████████ 12"
+ex render_bar("X 3") == "X: ███ 3"
+ex render_bar("zero 0") == "zero:  0"
+do
+let parts = text.split(line, " ")
+let label = parts.at(0)
+let count_str = parts.at(1)
+let count = text.to_int(count_str)
+return label + ": " + text.repeat("█", count) + " " + count_str
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n").filter(l -> l.length() > 0)
+io.println(text.join(lines.map(l -> render_bar(l)), "\n"))
+return 0
+end
