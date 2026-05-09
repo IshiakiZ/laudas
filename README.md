@@ -2,7 +2,7 @@
 
 > *Code that survives the crossing.*
 
-**[ishiakiz.github.io/laudas](https://ishiakiz.github.io/laudas/)** · **[releases](https://github.com/IshiakiZ/laudas/releases)** · **[5-min playbook](PLAYBOOK.md)** · **[PRD](prd.md)** · **[CHANGELOG](CHANGELOG.md)**
+**[ishiakiz.github.io/laudas](https://ishiakiz.github.io/laudas/)** · **[releases](https://github.com/IshiakiZ/laudas/releases)** · **[5-min playbook](PLAYBOOK.md)** · **[cheatsheet](CHEATSHEET.md)** · **[PRD](prd.md)** · **[CHANGELOG](CHANGELOG.md)**
 
 [![ci](https://github.com/IshiakiZ/laudas/actions/workflows/ci.yml/badge.svg)](https://github.com/IshiakiZ/laudas/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
