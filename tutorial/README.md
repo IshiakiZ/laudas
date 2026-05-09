@@ -21,6 +21,7 @@ If you don't have `laudas` installed yet, see the [main README](../README.md#ins
 | 3 | [`03_verifier.laud`](03_verifier.laud) | `ens` postconditions: Z3 proves your spec for **every** input |
 | 4 | [`04_collections.laud`](04_collections.laud) | Lists, lambdas, method chains, records, field access, `let` bindings |
 | 5 | [`05_pipeline.laud`](05_pipeline.laud) | A real pipeline: parse → validate → dedupe → sort → JSON. The compression-target demo. |
+| 6 | [`06_runnable.laud`](06_runnable.laud) | `fn main`, `io` module, `laudas run` — Laudas programs as actual CLI tools |
 
 ---
 
@@ -92,7 +93,7 @@ These are the building blocks for non-trivial programs.
 
 ---
 
-## Step 5 — A real pipeline
+## Step 5.5 — Real pipeline
 
 [`05_pipeline.laud`](05_pipeline.laud) is the compression-target.md demo as actually runnable Laudas. It:
 
@@ -106,6 +107,20 @@ Roughly 25 lines of Laudas, doing what would be ~70 lines of Python (production 
 
 ---
 
+## Step 6 — Runnable programs
+
+[`06_runnable.laud`](06_runnable.laud) introduces the runnable-program model:
+
+- **`fn main`** is the entry point. Laudas finds it, calls it, returns its int as the process exit code.
+- **`io` module** — `io.read_stdin()`, `io.println(s)`, `io.print(s)`, `io.eprintln(s)`, `io.read_line()`. The plumbing for shell tools.
+- **`laudas run FILE.laud [ARGS...]`** — execute the program (vs. `laudas FILE.laud` which only verifies).
+
+The same file can do both. `laudas tutorial/06_runnable.laud` verifies the `count_words` spec; `echo hello world | laudas run tutorial/06_runnable.laud` calls `main` and prints `2 words`.
+
+After this step, see [`../examples/csv2json.laud`](../examples/csv2json.laud), [`../examples/wc.laud`](../examples/wc.laud), and [`../examples/sort.laud`](../examples/sort.laud) for the same pattern in real CLI tools.
+
+---
+
 ## What's not in the tutorial yet
 
 - `req` preconditions (covered in [`../demo_let_verify.laud`](../demo_let_verify.laud))
@@ -113,5 +128,6 @@ Roughly 25 lines of Laudas, doing what would be ~70 lines of Python (production 
 - `extern python` (covered in [`../demo_extern.laud`](../demo_extern.laud))
 - `use "PATH"` multi-file modules (covered in [`../demo_use_main.laud`](../demo_use_main.laud))
 - `laudas request-body` spec-first inversion (covered in [`../demo_specfirst.laud`](../demo_specfirst.laud); requires `ANTHROPIC_API_KEY`)
+- Multi-arg lambdas + `.fold()` (covered in [`../demo_fold.laud`](../demo_fold.laud))
 
-Once you've worked through the five steps, those demos read naturally.
+Once you've worked through the six steps, those demos read naturally.

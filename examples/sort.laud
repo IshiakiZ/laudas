@@ -1,0 +1,19 @@
+; sort.laud — sort lines from stdin alphabetically.
+;
+; The Unix `sort` utility, in Laudas, in five lines of body.
+;
+; Run:
+;   Get-Content lines.txt | laudas run examples/sort.laud
+;   cat lines.txt | laudas run examples/sort.laud
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n").filter(l -> l.length() > 0)
+io.println(text.join(lines.sort(), "\n"))
+return 0
+end

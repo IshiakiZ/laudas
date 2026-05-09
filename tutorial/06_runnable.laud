@@ -1,0 +1,53 @@
+; Tutorial 06 — Runnable programs
+;
+; Until now, every step has been about *describing* a function and
+; *verifying* it. Now Laudas programs are actually executable.
+;
+; Run this two ways:
+;
+;   laudas tutorial/06_runnable.laud
+;     → verifies the spec (3 examples on count_words, no main examples)
+;
+;   laudas run tutorial/06_runnable.laud
+;     → calls main(), prints "no input" because there's nothing on stdin
+;
+;   echo hello world | laudas run tutorial/06_runnable.laud
+;     → calls main(), reads "hello world" from stdin, prints "2 words"
+
+
+fn count_words
+vis appearing
+eff pure
+in line: str
+out int
+ex count_words("hello world") == 2
+ex count_words("") == 0
+ex count_words("a b c d e") == 5
+ens result >= 0
+do
+return text.split(line, " ").filter(w -> w.length() > 0).length()
+end
+
+
+; The `main` function is the entry point. `laudas run` calls it and uses
+; its int return value as the process exit code (Unix convention: 0 = ok).
+;
+; `main` may take 0 args, or one `args: list<str>` parameter. The `eff io`
+; declaration is required because main calls things in the `io` module.
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = text.trim(io.read_stdin())
+if raw.length() == 0 {
+  io.eprintln("no input — pipe a line of text in:")
+  io.eprintln("  echo hello world | laudas run tutorial/06_runnable.laud")
+  return 64
+}
+let n = count_words(raw)
+io.print(n)
+io.println(" words")
+return 0
+end
