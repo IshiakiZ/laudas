@@ -1,0 +1,19 @@
+; uniq.laud — drop duplicate lines from stdin.
+;
+; Note: drops ALL duplicates (preserves first occurrence), not just
+; consecutive duplicates like Unix uniq. The .unique() method is order-
+; preserving. To pre-sort, pipe through sort first:
+;
+;   Get-Content file.txt | laudas run examples/sort.laud | laudas run examples/uniq.laud
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n").filter(l -> l.length() > 0)
+io.println(text.join(lines.unique(), "\n"))
+return 0
+end

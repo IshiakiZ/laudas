@@ -1,0 +1,35 @@
+; tail.laud — emit the last N lines from stdin (default 10).
+;
+; Run:
+;   Get-Content file.txt | laudas run examples/tail.laud
+;   Get-Content file.txt | laudas run examples/tail.laud 5
+
+
+fn parse_n
+vis appearing
+eff pure
+in args: list<str>
+in default: int
+out int
+ex parse_n([], 10) == 10
+ex parse_n(["7"], 10) == 7
+do
+if args.length() == 0 { return default }
+return text.to_int(args.first())
+end
+
+
+fn main
+vis appearing
+eff io
+in args: list<str>
+out int
+do
+let n = parse_n(args, 10)
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n")
+let total = lines.length()
+let drop = total - n
+io.println(text.join(lines.skip(drop), "\n"))
+return 0
+end

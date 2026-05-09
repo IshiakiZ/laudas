@@ -44,6 +44,9 @@ PASS_FILES = [
     "examples/sort.laud",
     "examples/json_pretty.laud",
     "demo_string_verify.laud",
+    "examples/head.laud",
+    "examples/tail.laud",
+    "examples/uniq.laud",
 ]
 
 # Intentionally-broken demos that MUST fail (CI flags it as a regression

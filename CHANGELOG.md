@@ -4,6 +4,34 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.8] — 2026-05-09 — six Unix tools, string-method verification, JSON pretty
+
+### Added — language
+
+- **String-method verification.** Voronin now handles `s.length()`, `s.upper()`, `s.lower()`, and chains thereof in pre/postconditions. `z3.Length()` backs `.length()`; `.upper()`/`.lower()` are modeled as opaque string-to-string Z3 functions, which is enough to prove `result >= 0` for `s.upper().length()` (length is preserved through the function).
+- **`text.to_json_pretty(v)`** — same as `to_json` but with 2-space indent.
+- **`text.to_int(s)`**, **`text.from_int(n)`** — string ↔ int conversions.
+- **`io.read_stdin()`** — read all of stdin as a string. (Already in v0.5.5; mentioned here because the v0.5.7 binary missed it.)
+
+### Added — examples
+
+Three new Unix-style tools join `csv2json`, `wc`, and `sort`:
+
+- **[`examples/head.laud`](examples/head.laud)** — first N lines from stdin, default 10.
+- **[`examples/tail.laud`](examples/tail.laud)** — last N lines from stdin.
+- **[`examples/uniq.laud`](examples/uniq.laud)** — drop duplicate lines (preserves first occurrence).
+- **[`examples/json_pretty.laud`](examples/json_pretty.laud)** — pretty-print JSON via Python FFI + `text.to_json_pretty`.
+
+Six real CLI tools total. They compose: `Get-Content file | laudas run sort.laud | laudas run uniq.laud`.
+
+### Fixed
+
+- **Stdin UTF-8.** `sys.stdin.reconfigure(encoding="utf-8")` so PowerShell-piped UTF-8 BOM bytes decode as `﻿` (one char) instead of three cp1252 chars. Was breaking `json.loads` on otherwise-valid input.
+- **Dict round-trip.** `_python_to_laudas` now handles `dict` (was falling through to opaque). JSON objects from `json.loads` come back as proper Laudas records.
+- **Binary-op precedence vs. string methods.** The `.length()` suffix-strip in voronin's `sym_eval` is now placed AFTER binary ops, so `result == s.length()` parses as the equality, not as `(result == s).length()`.
+
+---
+
 ## [v0.5.7] — 2026-05-09 — fix silent verifier skip, harden tests
 
 ### Fixed
