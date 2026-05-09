@@ -4,6 +4,18 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.7] — 2026-05-09 — fix silent verifier skip, harden tests
+
+### Fixed
+
+- **voronin missed records when laudas ran as a script**. When invoked as `python laudas.py FILE.laud`, the running module is `__main__` while voronin's `from laudas import TYPE_ALIASES` fetched a separately-loaded second copy with stale empty state. Result: record types reported `verifier limitation: unsupported input type: Box` instead of verifying. The console-script entry-point (`laudas FILE.laud`) hid the bug because in that case `laudas` and `__main__` are the same module. Fixed: `voronin._get_type_aliases()` now scans `sys.modules` for both names.
+
+### Added — tests
+
+- **`MUST_VERIFY_FILES` in the sweep** — a list of files that must show at least one `ver ✓` line in the output. Catches silent verifier-skip regressions like the one above. The previous sweep only validated exit codes.
+
+---
+
 ## [v0.5.6] — 2026-05-09 — first real CLI tool
 
 ### Added — language
