@@ -2,9 +2,11 @@
 
 > *Code that survives the crossing.*
 
+**[ishiakiz.github.io/laudas](https://ishiakiz.github.io/laudas/)** · **[releases](https://github.com/IshiakiZ/laudas/releases)** · **[PRD](prd.md)** · **[CHANGELOG](CHANGELOG.md)**
+
 A verification-first programming language designed for AI agents to generate and human-AI pairs to maintain. The compiler talks back to the model in plain English. The verifier (Z3-backed) does the proofs. The wire format is engineered for LLM tokens; the display format is rendered as Laudan archival entries — pages from *Volume I*.
 
-**Status:** pre-alpha (v0.5). Working: parser, example runner, Z3 verification, display renderer, list / lambda / method-chaining, Python FFI. Not yet: type aliases, records, spec-first inversion, multi-file modules.
+**Status:** pre-alpha (v0.5.2). Working: parser, example runner, Z3 verification (with let-bindings), display renderer, lists / lambdas / method-chaining, type aliases / records / field access, multi-file modules via `use`, bare function calls, Python FFI via `extern python`, **spec-first inversion** via `laudas request-body`, standalone exe, pip install. Scaffolded: native Rust port (`rust/`), synthetic-corpus pipeline (`synthesis/`).
 
 ---
 
