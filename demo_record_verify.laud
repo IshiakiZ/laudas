@@ -1,0 +1,42 @@
+; v0.5.3 demo — voronin now verifies functions that take records and use
+; field-access in pre/postconditions.
+;
+; Run:  laudas demo_record_verify.laud
+;
+; Both functions get full Z3 verification — `ver ✓ ens result >= 0` —
+; because voronin builds a Z3 datatype for each record type and resolves
+; field-access expressions via the datatype's accessors.
+
+
+type Box { width: int, height: int }
+
+
+fn area
+vis appearing
+eff pure
+in b: Box
+req b.width >= 0
+req b.height >= 0
+out int
+ex area(Box { width: 3, height: 4 }) == 12
+ex area(Box { width: 0, height: 5 }) == 0
+ex area(Box { width: 7, height: 1 }) == 7
+ens result >= 0
+do
+return b.width * b.height
+end
+
+
+fn perimeter
+vis appearing
+eff pure
+in b: Box
+req b.width >= 0
+req b.height >= 0
+out int
+ex perimeter(Box { width: 3, height: 4 }) == 14
+ex perimeter(Box { width: 0, height: 5 }) == 10
+ens result >= 0
+do
+return 2 * (b.width + b.height)
+end

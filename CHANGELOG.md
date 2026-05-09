@@ -4,6 +4,22 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.3] — 2026-05-09 — voronin learns records
+
+### Added — verifier
+
+- **Z3 record types** — voronin now dynamically builds a Z3 datatype for each `type` declaration in the file. Inputs of record type are full Z3 symbolic values, not skipped.
+- **Field-access in pre/postconditions** — `req b.width >= 0`, `ens result == p.x + q.x`, etc. The expression parser resolves `obj.field` to the datatype's accessor.
+- **`str` inputs** — voronin now accepts `str` as an input type (Z3's String sort).
+
+Functions like `area(b: Box) → int { ens result >= 0 }` (with `req b.width >= 0` and `req b.height >= 0`) now get `ver ✓` instead of `ver · skipped`.
+
+### Demo
+
+[`demo_record_verify.laud`](demo_record_verify.laud) — `area` and `perimeter` both verify `ens result >= 0` for every valid `Box` input.
+
+---
+
 ## [v0.5.2] — 2026-05-09 — Volume I scaffolding
 
 ### Added — language

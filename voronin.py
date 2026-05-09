@@ -61,9 +61,51 @@ def make_input_sym(p: Param) -> Any:
         return z3.Int(p.name)
     if base == "bool":
         return z3.Bool(p.name)
+    if base == "str":
+        return z3.String(p.name)
     if base == "int?":
         return z3.Const(p.name, IntOpt)
+    # Record types: build an opaque Z3 datatype with the declared fields.
+    # We look the type up via the global TYPE_ALIASES registry from laudas.
+    try:
+        from laudas import TYPE_ALIASES
+    except ImportError:
+        TYPE_ALIASES = {}
+    if base in TYPE_ALIASES:
+        return _make_record_sym(p.name, base, TYPE_ALIASES[base])
     raise NotSupported(f"unsupported input type: {base}")
+
+
+# Cache of dynamically-built Z3 record sorts so the same type isn't rebuilt
+# every verification (Z3 datatype identities matter for solver state).
+_RECORD_SORTS: dict[str, Any] = {}
+
+
+def _make_record_sort(type_name: str, type_alias: Any) -> Any:
+    """Build (or retrieve) a Z3 datatype for a Laudas record type."""
+    if type_name in _RECORD_SORTS:
+        return _RECORD_SORTS[type_name]
+    dt = z3.Datatype(type_name)
+    field_specs = []
+    for f in type_alias.fields:
+        if f.type.base == "int":
+            sort = z3.IntSort()
+        elif f.type.base == "bool":
+            sort = z3.BoolSort()
+        elif f.type.base == "str":
+            sort = z3.StringSort()
+        else:
+            raise NotSupported(f"record field type not supported in verifier: {f.type.base}")
+        field_specs.append((f.name, sort))
+    dt.declare(f"mk_{type_name}", *field_specs)
+    sort = dt.create()
+    _RECORD_SORTS[type_name] = sort
+    return sort
+
+
+def _make_record_sym(var_name: str, type_name: str, type_alias: Any) -> Any:
+    sort = _make_record_sort(type_name, type_alias)
+    return z3.Const(var_name, sort)
 
 
 def parse_refinement(ref: str, var: Any, env: SymEnv) -> Any:
@@ -115,6 +157,20 @@ def sym_eval(expr: str, env: SymEnv) -> Any:
     m = re.match(r"^(\w+)\.value\(\)$", s)
     if m:
         return IntOpt.val(env.syms[m.group(1)])
+
+    # Record field access: NAME.FIELD (no parens). Resolves via the dynamically-built
+    # Z3 datatype's field accessors.
+    m = re.match(r"^(\w+)\.(\w+)$", s)
+    if m:
+        obj_name, field = m.groups()
+        if obj_name in env.syms:
+            obj = env.syms[obj_name]
+            sort_name = obj.sort().name() if hasattr(obj, "sort") else None
+            if sort_name in _RECORD_SORTS:
+                sort = _RECORD_SORTS[sort_name]
+                accessor = getattr(sort, field, None)
+                if accessor is not None and callable(accessor):
+                    return accessor(obj)
 
     # Word operators (lowest precedence)
     for word_ops in (("iff", "implies"),):
