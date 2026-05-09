@@ -1,0 +1,35 @@
+; Tutorial 02 — Examples are tests
+;
+; The `ex` slot lets you write concrete examples. When you run
+; `laudas tutorial/02_examples.laud`, each example is executed and
+; the actual result is compared to the expected. If they don't match,
+; you get an LLM-shaped diagnostic.
+;
+; Run:  laudas tutorial/02_examples.laud
+
+
+fn add
+vis appearing
+eff pure
+in a: int
+in b: int
+out int
+ex add(2, 3) == 5
+ex add(0, 0) == 0
+ex add(-7, 10) == 3
+do
+return a + b
+end
+
+
+fn double
+vis appearing
+eff pure
+in x: int
+out int
+ex double(5) == 10
+ex double(0) == 0
+ex double(-3) == -6
+do
+return x * 2
+end

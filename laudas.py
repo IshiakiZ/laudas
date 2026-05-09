@@ -1071,6 +1071,16 @@ def apply_op(op: str, left: Any, right: Any) -> Any:
         return values_equal(left, right)
     if op == "!=":
         return not values_equal(left, right)
+    if op == "&&":
+        return bool(left) and bool(right)
+    if op == "||":
+        return bool(left) or bool(right)
+    # String concatenation with `+`
+    if op == "+" and isinstance(left, str) and isinstance(right, str):
+        return left + right
+    # Lexicographic string comparison
+    if op in ("<", ">", "<=", ">=") and isinstance(left, str) and isinstance(right, str):
+        return {"<": left < right, ">": left > right, "<=": left <= right, ">=": left >= right}[op]
     if op in ("+", "-", "*", "/", "%", "<", ">", "<=", ">="):
         if not (isinstance(left, int) and isinstance(right, int)):
             raise RuntimeFail(f"op {op} requires int operands, got {fmt_value(left)} and {fmt_value(right)}")

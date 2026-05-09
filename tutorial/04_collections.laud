@@ -1,0 +1,59 @@
+; Tutorial 04 — Real types
+;
+; Lists, arrow lambdas, method chains, records, field access, let bindings.
+; These are the building blocks for non-trivial programs.
+;
+; Run:  laudas tutorial/04_collections.laud
+
+
+; ---- 1. Lists, lambdas, method chains -----------------------
+
+fn sum_of_even_squares
+vis appearing
+eff pure
+in xs: list<int>
+out int
+ex sum_of_even_squares([1, 2, 3, 4, 5]) == 20
+ex sum_of_even_squares([]) == 0
+ex sum_of_even_squares([1, 3, 5]) == 0
+do
+return xs.filter(x -> x % 2 == 0).map(x -> x * x).sum()
+end
+
+
+; ---- 2. Records and field access ----------------------------
+
+type Point { x: int, y: int }
+
+
+fn distance_squared
+vis appearing
+eff pure
+in p: Point
+in q: Point
+out int
+ex distance_squared(Point { x: 0, y: 0 }, Point { x: 3, y: 4 }) == 25
+ex distance_squared(Point { x: 1, y: 1 }, Point { x: 1, y: 1 }) == 0
+ens result >= 0
+do
+let dx = p.x - q.x
+let dy = p.y - q.y
+return dx * dx + dy * dy
+end
+
+
+; ---- 3. Records inside lists, dedupe by derived key ---------
+
+type Person { name: str, role: str }
+
+
+fn unique_roles
+vis appearing
+eff pure
+in people: list<Person>
+out list<str>
+ex unique_roles([Person { name: "Mira", role: "engineer" }, Person { name: "Dara", role: "captain" }, Person { name: "Cass", role: "engineer" }]) == ["engineer", "captain"]
+ex unique_roles([]) == []
+do
+return people.map(p -> p.role).unique()
+end

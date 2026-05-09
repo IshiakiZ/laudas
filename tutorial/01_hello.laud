@@ -1,0 +1,16 @@
+; Tutorial 01 — Hello, Laudas
+;
+; This is the simplest possible Laudas function. It takes nothing,
+; returns the int 42. The slot grammar is fixed; every line begins
+; with a slot keyword.
+;
+; Run:  laudas tutorial/01_hello.laud
+
+
+fn answer
+vis appearing
+eff pure
+out int
+do
+return 42
+end

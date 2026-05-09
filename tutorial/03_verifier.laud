@@ -1,0 +1,52 @@
+; Tutorial 03 — The verifier
+;
+; The `ens` slot is a postcondition: a property the function promises
+; to satisfy on every return. Voronin (the Z3-backed verifier) proves
+; it for ALL inputs, not just the ones you wrote examples for.
+;
+; Run:  laudas tutorial/03_verifier.laud
+;
+; Expected output:
+;   ver  ✓  ens result.is_some() iff b != 0
+;
+; That ✓ means Z3 walked the entire input space and confirmed the
+; postcondition holds. Try changing the body to introduce a bug
+; (e.g., `if b == 0 { return Some(0) }`) and re-run; voronin will
+; find a counterexample like `a = -1, b = 0` you didn't test.
+
+
+fn safe_div
+vis appearing
+eff pure
+in a: int
+in b: int
+out int?
+ex safe_div(10, 2) == Some(5)
+ex safe_div(7, 0) == None
+ex safe_div(-12, 3) == Some(-4)
+ens result.is_some() iff b != 0
+do
+if b == 0 { return None }
+return Some(a / b)
+end
+
+
+; And one with `req` preconditions + an `ens` proven through a `let`:
+
+fn percentage
+vis appearing
+eff pure
+in part: int
+in whole: int
+req part >= 0
+req whole > 0
+req part <= whole
+out int
+ex percentage(25, 100) == 25
+ex percentage(1, 3) == 33
+ens result >= 0
+ens result <= 100
+do
+let scaled = part * 100
+return scaled / whole
+end

@@ -1,0 +1,63 @@
+; Tutorial 05 — A real pipeline
+;
+; The compression-target.md demo as actually runnable Laudas:
+;   parse comma-separated row → User record
+;   validate (drop rows missing fields or whose email lacks '@')
+;   dedupe by lowercased email
+;   sort by (role, name)
+;   serialize to JSON
+;
+; Roughly 25 lines of Laudas doing what would be ~70 lines of Python
+; (production code + pytest tests combined).
+;
+; Run:  laudas tutorial/05_pipeline.laud
+
+
+type User { name: str, email: str, role: str }
+
+
+; --- Parse one comma-separated row into a User record --------
+
+fn parse_user
+vis appearing
+eff pure
+in row: str
+out User
+ex parse_user("Mira,mira@laudas.dev,engineer") == User { name: "Mira", email: "mira@laudas.dev", role: "engineer" }
+ex parse_user("Dara,dara@laudas.dev,captain") == User { name: "Dara", email: "dara@laudas.dev", role: "captain" }
+do
+let parts = text.split(row, ",")
+return User { name: parts.at(0), email: parts.at(1), role: parts.at(2) }
+end
+
+
+; --- Is this user record well-formed? ------------------------
+
+fn is_valid
+vis appearing
+eff pure
+in u: User
+out bool
+ex is_valid(User { name: "Mira", email: "mira@laudas.dev", role: "engineer" }) == true
+ex is_valid(User { name: "", email: "x@y.dev", role: "r" }) == false
+ex is_valid(User { name: "Mira", email: "no-at-sign", role: "r" }) == false
+do
+return u.name.length() > 0 && u.email.contains("@") && u.role.length() > 0
+end
+
+
+; --- The full pipeline ---------------------------------------
+
+fn process
+vis appearing
+eff pure
+in rows: list<str>
+out str
+ex process(["Mira,mira@laudas.dev,engineer", "Dara,dara@laudas.dev,captain", "Mira,MIRA@LAUDAS.DEV,engineer", "broken,no-at,role"]) == "[{\"name\":\"Dara\",\"email\":\"dara@laudas.dev\",\"role\":\"captain\"},{\"name\":\"Mira\",\"email\":\"mira@laudas.dev\",\"role\":\"engineer\"}]"
+do
+let parsed = rows.map(r -> parse_user(r))
+let valid = parsed.filter(u -> is_valid(u))
+let unique = valid.dedupe_by(u -> u.email.lower())
+let sorted = unique.sort_by(u -> u.role)
+return text.to_json(sorted)
+end
