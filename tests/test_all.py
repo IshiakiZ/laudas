@@ -48,6 +48,16 @@ FAIL_FILES = [
     "demo_buggy.laud",
 ]
 
+# Files where the verifier MUST report at least one `ver ✓` line. Catches
+# silent regressions where voronin starts skipping things it used to verify
+# (e.g. the __main__-vs-laudas-module TYPE_ALIASES bug fixed in ca62665).
+MUST_VERIFY_FILES = [
+    "demo_fixed.laud",            # ens result.is_some() iff b != 0
+    "demo_let_verify.laud",       # ens result <= 100, with let-bindings
+    "demo_record_verify.laud",    # ens result >= 0 over record fields
+    "tutorial/03_verifier.laud",  # the tutorial step that introduces ens
+]
+
 
 def discover() -> tuple[list[str], list[str]]:
     pass_files = list(PASS_FILES)
@@ -77,7 +87,17 @@ def main() -> int:
     for f in pass_files:
         code, output = run(f)
         if code == 0:
-            print(f"  ✓  {f}")
+            # If this file is on the must-verify list, also check that
+            # at least one `ver ✓` line appears — catches silent skips.
+            if f in MUST_VERIFY_FILES and "ver  ✓" not in output:
+                print(f"  ✗  {f}  (exit 0 but no `ver ✓` — verifier silently skipped)")
+                print("     ---")
+                for line in output.splitlines()[-15:]:
+                    print(f"     {line}")
+                print("     ---")
+                failures.append(f"{f} (silent verifier skip)")
+            else:
+                print(f"  ✓  {f}")
         else:
             print(f"  ✗  {f}  (exit {code})")
             print("     ---")
