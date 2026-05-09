@@ -16,6 +16,7 @@ These are **real**, not toys. They use real Python under the hood for things Lau
 | [`uniq.laud`](uniq.laud) | 11 | drop duplicate lines (preserves first) | `cat file \| laudas run uniq.laud` |
 | [`json_pretty.laud`](json_pretty.laud) | 22 | indent JSON via Python's json.loads | `echo '{"a":1}' \| laudas run json_pretty.laud` |
 | [`bars.laud`](bars.laud) | 25 | ASCII horizontal bar chart from `LABEL COUNT` lines | `echo "Mira 12`nDara 8" \| laudas run bars.laud` |
+| [`stats.laud`](stats.laud) | 50 | count/min/max/sum/mean for a `name,value` CSV | `Get-Content scores.csv \| laudas run stats.laud` |
 
 ## They compose
 

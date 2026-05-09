@@ -223,6 +223,36 @@ def sym_eval(expr: str, env: SymEnv) -> Any:
             right = sym_eval(right_str, env)
             return _apply(op, left, right)
 
+    # Higher-order Seq methods: .map(...) and .filter(...)
+    # These are over-approximated symbolically:
+    #   xs.map(f)    ≈ a fresh Seq with the same length as xs
+    #   xs.filter(p) ≈ a fresh Seq with length in [0, Length(xs)]
+    # That's enough to verify many ens conditions about result.length(),
+    # without modeling the predicate or the function symbolically.
+    # Placed AFTER binary ops so `result == xs.map(f)` parses as the equality.
+    m = re.match(r"^(.+)\.(map|filter)\((.+)\)$", s, flags=re.DOTALL)
+    if m:
+        prefix_str = m.group(1)
+        method = m.group(2)
+        if _balanced(prefix_str):
+            try:
+                seq_val = sym_eval(prefix_str, env)
+            except NotSupported:
+                seq_val = None
+            if seq_val is not None and hasattr(seq_val, "sort"):
+                try:
+                    seq_len = z3.Length(seq_val)  # validates it's a Seq
+                except (z3.Z3Exception, TypeError):
+                    seq_len = None
+                if seq_len is not None:
+                    fresh = z3.FreshConst(seq_val.sort())
+                    if method == "map":
+                        env.assumptions.append(z3.Length(fresh) == seq_len)
+                    else:  # filter
+                        env.assumptions.append(z3.Length(fresh) <= seq_len)
+                        env.assumptions.append(z3.Length(fresh) >= 0)
+                    return fresh
+
     # String / Seq methods: ANY_STRING_OR_LIST_EXPR.length() / .upper() / .lower()
     # Placed AFTER binary ops so `result == s.length()` parses as the equality,
     # not as `(result == s).length()`. Prefix recursively evaluated, so chains

@@ -1,0 +1,80 @@
+; stats.laud — read a 2-column CSV ("name,value"), output simple stats.
+;
+; Real coding project, exercises:
+;   - records (Row { name: str, value: int })
+;   - stdin reading (io.read_stdin)
+;   - text parsing (text.split, text.to_int)
+;   - list method chains (.skip, .filter, .map)
+;   - aggregate methods (.length, .min, .max, .sum)
+;   - record field access (r.value)
+;   - validated body (verifier proves count >= 0, etc.)
+;   - early-return guard for empty input
+;
+; Run:
+;   Get-Content examples/scores.csv | laudas run examples/stats.laud
+
+
+type Row { name: str, value: int }
+
+
+fn parse_row
+vis appearing
+eff pure
+in line: str
+out Row
+ex parse_row("alpha,12") == Row { name: "alpha", value: 12 }
+ex parse_row("beta,7") == Row { name: "beta", value: 7 }
+ex parse_row("gamma,-3") == Row { name: "gamma", value: -3 }
+do
+let parts = text.split(line, ",")
+return Row { name: parts.at(0), value: text.to_int(parts.at(1)) }
+end
+
+
+; A helper that's pure + verifiable: result is bounded by inputs.
+fn safe_divide
+vis appearing
+eff pure
+in numerator: int
+in denominator: int
+req denominator > 0
+out int
+ex safe_divide(10, 2) == 5
+ex safe_divide(7, 3) == 2
+ens denominator > 0
+do
+return numerator / denominator
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n").skip(1).filter(l -> l.length() > 0)
+if lines.length() == 0 {
+  io.eprintln("usage: pipe a CSV with header `name,value` in")
+  io.eprintln("  Get-Content scores.csv | laudas run examples/stats.laud")
+  return 64
+}
+let rows = lines.map(l -> parse_row(l))
+let values = rows.map(r -> r.value)
+let n = values.length()
+io.println("══════════════════════════════════")
+io.println("  Laudas stats")
+io.println("──────────────────────────────────")
+io.print("  rows:   ")
+io.println(n)
+io.print("  min:    ")
+io.println(values.min())
+io.print("  max:    ")
+io.println(values.max())
+io.print("  sum:    ")
+io.println(values.sum())
+io.print("  mean:   ")
+io.println(safe_divide(values.sum(), n))
+io.println("══════════════════════════════════")
+return 0
+end

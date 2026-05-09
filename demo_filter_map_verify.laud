@@ -1,0 +1,47 @@
+; v0.5.11 demo — voronin over-approximates .filter and .map symbolically
+; so length-related ens conditions verify across all inputs.
+;
+; The model: xs.map(f) is a fresh Seq with the same length as xs;
+;            xs.filter(p) is a fresh Seq with length in [0, Length(xs)].
+; That's enough to prove length-bound ens without modeling the predicate
+; or the function — and it's an HONEST over-approximation: voronin doesn't
+; pretend to know what filter/map produce element-wise.
+
+
+fn positives_only
+vis appearing
+eff pure
+in xs: list<int>
+out list<int>
+ex positives_only([1, -2, 3, -4]) == [1, 3]
+ex positives_only([]) == []
+ens result.length() <= xs.length()
+do
+return xs.filter(x -> x > 0)
+end
+
+
+fn doubled
+vis appearing
+eff pure
+in xs: list<int>
+out list<int>
+ex doubled([1, 2, 3]) == [2, 4, 6]
+ex doubled([]) == []
+ens result.length() == xs.length()
+do
+return xs.map(x -> x * 2)
+end
+
+
+fn positive_doubled
+vis appearing
+eff pure
+in xs: list<int>
+out list<int>
+ex positive_doubled([1, -2, 3]) == [2, 6]
+ex positive_doubled([]) == []
+ens result.length() <= xs.length()
+do
+return xs.filter(x -> x > 0).map(x -> x * 2)
+end

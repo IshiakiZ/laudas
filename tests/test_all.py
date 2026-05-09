@@ -50,6 +50,8 @@ PASS_FILES = [
     "examples/bars.laud",
     "demo_bool_predicate.laud",
     "demo_list_verify.laud",
+    "demo_filter_map_verify.laud",
+    "examples/stats.laud",
 ]
 
 # Intentionally-broken demos that MUST fail (CI flags it as a regression
@@ -69,6 +71,7 @@ MUST_VERIFY_FILES = [
     "demo_string_verify.laud",    # ens over s.length(), s.upper().length()
     "demo_bool_predicate.laud",   # bool-returning predicates over records
     "demo_list_verify.laud",      # ens over list<T>.length() (Z3 Seq sort)
+    "demo_filter_map_verify.laud",# ens over filter/map length-bounds
     "tutorial/03_verifier.laud",  # the tutorial step that introduces ens
 ]
 
