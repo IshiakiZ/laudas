@@ -1893,6 +1893,10 @@ def check_file(path: str) -> int:
     if failures == 0:
         total_ex = sum(len(f.exs) for f in fns)
         print(f"  all checks passed  ·  {total_ex} example{'' if total_ex==1 else 's'} + verification")
+        if "main" in FUNCTIONS:
+            print()
+            print(f"  this file defines `fn main` — to execute it, use:")
+            print(f"      laudas run {path}")
         return 0
     print(f"  {failures} failure{'' if failures==1 else 's'}")
     return 1
