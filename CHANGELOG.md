@@ -4,6 +4,46 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.10] — 2026-05-09 — verifier expressivity + LLM-shaped counterexamples
+
+### Added — verifier (voronin)
+
+- **`list<T>` inputs** modeled as Z3 Sequence sort. `xs.length()` resolves to `z3.Length(seq)`, so `ens result == xs.length() * 2` etc. now verify cleanly across all `list<int>` / `list<str>` / `list<bool>` inputs.
+- **String methods** (`s.length()`, `s.upper()`, `s.lower()`, chained) verify in pre/postconditions. `z3.Length()` for length; opaque length-preserving Z3 functions for case folding. Chains like `s.upper().length()` work.
+- **Bool-returning predicates** over records — `is_valid(u: User) -> bool` style — verify `ens result == (u.name.length() > 0 && ...)`. The substrate was already there; this commit adds the demo + the must-verify regression check.
+- **`result.value()`** continues to work in `ens` for Option<int>; now formatted properly in counterexamples.
+
+### Added — LLM-shaped counterexamples
+
+Counterexamples are now pretty-printed as Laudas syntax instead of Z3 internal printouts:
+
+| before | after |
+|---|---|
+| `b=Box!val!0 → result = -1` | `b=Box { width: 1, height: -1 } → result = -1` |
+| `result = some(0)` | `result = Some(0)` |
+| `b=true` (capital T from Z3) | `b=true` |
+| `s="hello"` | `s="hello"` (quoted) |
+
+The structured JSON payload also gets the cleaned strings — direct improvement to the patch-loop UX. The compiler-as-teacher pitch in the PRD is now materially backed.
+
+### Added — community
+
+- **[CHEATSHEET.md](CHEATSHEET.md)** — single-page reference: every slot, every operator, every stdlib module/method, every CLI subcommand, voronin coverage table. Designed for both human reference and LLM system-prompt inclusion.
+- **[PLAYBOOK.md](PLAYBOOK.md)** — five-minute evaluator's guide. 30-sec pitch, 60-sec proof, 90-sec tour, when-it's-for-you, what-to-do-next ladder, honest "not yet" section.
+
+### Added — examples / tools
+
+- **[`examples/bars.laud`](examples/bars.laud)** — ASCII horizontal bar chart from `LABEL COUNT` lines. Uses new `text.repeat(s, n)` stdlib.
+- **[`examples/README.md`](examples/README.md)** — toolkit catalog. Eight tools listed with one-line descriptions and example pipes.
+
+### Stdlib additions
+
+- `text.repeat(s, n)` — repeat a string N times.
+
+(v0.5.9 was an internal-only milestone; this release ships v0.5.9 + v0.5.10 contents together.)
+
+---
+
 ## [v0.5.8] — 2026-05-09 — six Unix tools, string-method verification, JSON pretty
 
 ### Added — language
