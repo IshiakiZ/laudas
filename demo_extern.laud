@@ -1,0 +1,72 @@
+; v0.5 demo — Python interop via `extern python "..."`
+; Run:  laudas demo_extern.laud
+;
+; Each `fn` below has no body — instead, an `extern` slot points to a
+; Python callable. At runtime, Laudas:
+;   1. converts arguments to Python values
+;   2. invokes the Python function
+;   3. converts the result back to a Laudas value
+;
+; This gives Laudas day-one access to all of PyPI: math, requests, numpy,
+; pandas, anything pip-installable.
+;
+; voronin skips verification on extern functions (foreign body is
+; not symbolically inspectable), but examples still run.
+
+
+; --- 1. math.isqrt — integer square root from Python stdlib ---
+
+fn isqrt
+vis appearing
+eff pure
+in x: int
+out int
+ex isqrt(9) == 3
+ex isqrt(16) == 4
+ex isqrt(25) == 5
+ex isqrt(0) == 0
+extern python "math.isqrt"
+end
+
+
+; --- 2. math.factorial — also Python stdlib ---
+
+fn factorial
+vis appearing
+eff pure
+in n: int
+out int
+ex factorial(0) == 1
+ex factorial(5) == 120
+ex factorial(7) == 5040
+extern python "math.factorial"
+end
+
+
+; --- 3. builtins.max — Python builtin, takes a list ---
+
+fn list_max
+vis appearing
+eff pure
+in xs: list<int>
+out int
+ex list_max([3, 1, 4, 1, 5, 9, 2, 6]) == 9
+ex list_max([42]) == 42
+ex list_max([-1, -5, -2]) == -1
+extern python "builtins.max"
+end
+
+
+; --- 4. math.gcd — greatest common divisor ---
+
+fn gcd
+vis appearing
+eff pure
+in a: int
+in b: int
+out int
+ex gcd(12, 18) == 6
+ex gcd(100, 75) == 25
+ex gcd(7, 13) == 1
+extern python "math.gcd"
+end

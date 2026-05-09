@@ -1,0 +1,37 @@
+[project]
+name = "laudas"
+version = "0.1.0"
+description = "Laudas — a verification-first programming language for AI generation"
+readme = "prd.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Pearce Harshbarger" },
+]
+keywords = ["laudas", "programming-language", "verification", "z3", "llm", "ai"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Software Development :: Interpreters",
+]
+dependencies = [
+    "z3-solver>=4.13",
+]
+
+[project.urls]
+Homepage      = "https://github.com/IshiakiZ/laudas"
+Repository    = "https://github.com/IshiakiZ/laudas"
+Documentation = "https://github.com/IshiakiZ/laudas/blob/main/prd.md"
+Issues        = "https://github.com/IshiakiZ/laudas/issues"
+
+[project.scripts]
+laudas = "laudas:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["laudas", "voronin"]

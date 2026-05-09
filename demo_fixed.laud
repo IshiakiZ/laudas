@@ -1,0 +1,21 @@
+; Demo: the fixed safe_div, after applying suggestion #1
+; from the diagnostic emitted by demo_buggy.laud.
+;
+; Run:   python laudas.py demo_fixed.laud
+;
+; All three examples should pass.
+
+fn safe_div
+vis appearing
+eff pure
+in a: int
+in b: int
+out int?
+ex safe_div(10, 2) == Some(5)
+ex safe_div(7, 2) == Some(3)
+ex safe_div(7, 0) == None
+ens result.is_some() iff b != 0
+do
+if b == 0 { return None }
+return Some(a / b)
+end

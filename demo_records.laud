@@ -1,0 +1,70 @@
+; v0.5 demo — type aliases, records, field access, let-bindings
+; Run:  laudas demo_records.laud
+
+
+; --- Type declarations -------------------------------------
+
+type Point { x: int, y: int }
+
+type User { id: int, name: str, role: str }
+
+
+; --- 1. Field access + let-bindings ------------------------
+
+fn distance_squared
+vis appearing
+eff pure
+in p: Point
+in q: Point
+out int
+ex distance_squared(Point { x: 0, y: 0 }, Point { x: 3, y: 4 }) == 25
+ex distance_squared(Point { x: 1, y: 1 }, Point { x: 1, y: 1 }) == 0
+ex distance_squared(Point { x: -2, y: 0 }, Point { x: 1, y: 4 }) == 25
+ens result >= 0
+do
+let dx = p.x - q.x
+let dy = p.y - q.y
+return dx * dx + dy * dy
+end
+
+
+; --- 2. Pulling a field straight off a record --------------
+
+fn user_id
+vis appearing
+eff pure
+in u: User
+out int
+ex user_id(User { id: 42, name: "Mira", role: "engineer" }) == 42
+ex user_id(User { id: 1, name: "Cass", role: "engineer" }) == 1
+do
+return u.id
+end
+
+
+; --- 3. Records inside lists, with method chaining ---------
+
+fn count_engineers
+vis appearing
+eff pure
+in users: list<User>
+out int
+ex count_engineers([User { id: 1, name: "Mira", role: "engineer" }, User { id: 2, name: "Dara", role: "captain" }, User { id: 3, name: "Cass", role: "engineer" }]) == 2
+ex count_engineers([]) == 0
+do
+return users.filter(u -> u.role == "engineer").length()
+end
+
+
+; --- 4. Sum a derived field across a list ------------------
+
+fn total_x
+vis appearing
+eff pure
+in points: list<Point>
+out int
+ex total_x([Point { x: 1, y: 0 }, Point { x: 2, y: 0 }, Point { x: 3, y: 0 }]) == 6
+ex total_x([]) == 0
+do
+return points.map(p -> p.x).sum()
+end
