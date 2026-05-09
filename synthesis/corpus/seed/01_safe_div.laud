@@ -1,0 +1,16 @@
+; corpus seed — safe integer division returning Option
+
+fn safe_div
+vis appearing
+eff pure
+in a: int
+in b: int
+out int?
+ex safe_div(10, 2) == Some(5)
+ex safe_div(7, 0) == None
+ex safe_div(-12, 3) == Some(-4)
+ens result.is_some() iff b != 0
+do
+if b == 0 { return None }
+return Some(a / b)
+end

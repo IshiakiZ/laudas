@@ -1,0 +1,25 @@
+; corpus seed — Python FFI via `extern python`
+
+fn isqrt
+vis appearing
+eff pure
+in x: int
+out int
+req x >= 0
+ex isqrt(0) == 0
+ex isqrt(9) == 3
+ex isqrt(100) == 10
+extern python "math.isqrt"
+end
+
+
+fn gcd
+vis appearing
+eff pure
+in a: int
+in b: int
+out int
+ex gcd(12, 18) == 6
+ex gcd(7, 13) == 1
+extern python "math.gcd"
+end

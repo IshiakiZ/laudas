@@ -1,0 +1,13 @@
+; corpus seed — list pipeline with method chain + arrow lambda
+
+fn sum_of_even_squares
+vis appearing
+eff pure
+in xs: list<int>
+out int
+ex sum_of_even_squares([1, 2, 3, 4, 5]) == 20
+ex sum_of_even_squares([]) == 0
+ex sum_of_even_squares([1, 3, 5]) == 0
+do
+return xs.filter(x -> x % 2 == 0).map(x -> x * x).sum()
+end

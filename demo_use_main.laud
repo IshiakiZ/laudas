@@ -1,0 +1,27 @@
+; v0.5.2 demo — multi-file modules via `use "PATH"`.
+;
+; Run:  laudas demo_use_main.laud
+;
+; The `use` directive at the top includes another file's top-level
+; declarations into this file's namespace. Path is relative to the
+; current file. Cycle-safe.
+
+
+use "demo_use_lib.laud"
+
+
+fn closer_to_origin
+vis appearing
+eff pure
+in a: Coordinate
+in b: Coordinate
+out Coordinate
+ex closer_to_origin(Coordinate { lat: 1, lng: 1 }, Coordinate { lat: 5, lng: 5 }) == Coordinate { lat: 1, lng: 1 }
+ex closer_to_origin(Coordinate { lat: 10, lng: 0 }, Coordinate { lat: 0, lng: 3 }) == Coordinate { lat: 0, lng: 3 }
+do
+let origin = Coordinate { lat: 0, lng: 0 }
+let da = manhattan(a, origin)
+let db = manhattan(b, origin)
+if da <= db { return a }
+return b
+end

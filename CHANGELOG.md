@@ -4,6 +4,30 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.2] — 2026-05-09 — Volume I scaffolding
+
+### Added — language
+
+- **`use "PATH"`** — multi-file modules. `use` at the top of a `.laud` file recursively loads another file's top-level declarations into the current namespace. Cycle-safe.
+- **Bare function calls** — call user-defined Laudas functions across files: `manhattan(a, b)` resolves via the global `FUNCTIONS` registry.
+- **`let` bindings inside voronin** — the verifier now symbolically executes `let NAME = EXPR` statements before the if-return chain. Functions like `percentage_v2` (which use `let scaled = part * 100`) now get full Z3 verification (`ver ✓ ens result <= 100`) instead of skipping.
+- **`request-body` subcommand** — `laudas request-body FILE.laud` finds functions with empty `do` blocks, asks Claude (via `ANTHROPIC_API_KEY`) to generate a body satisfying the spec, writes the result to `FILE.filled.laud`. Verify with `laudas FILE.filled.laud`. Spec-first inversion.
+
+### Added — Volume I scaffolding
+
+- **`rust/`** — Cargo project skeleton + [PORT_PLAN.md](rust/PORT_PLAN.md) outlining the staged Python → Rust port for v1.0.
+- **`synthesis/`** — synthetic-corpus pipeline:
+  - [`generate.py`](synthesis/generate.py) — Python → Laudas translator (calls Claude, runs `voronin`, keeps verified outputs)
+  - [`corpus/seed/`](synthesis/corpus/seed/) — first 5 hand-written corpus examples
+  - [`prompts/translate.md`](synthesis/prompts/translate.md) — versioned prompt template
+  - [`README.md`](synthesis/README.md) — workflow, fine-tuning plan, status checklist
+
+### Demo
+
+[`demo_let_verify.laud`](demo_let_verify.laud), [`demo_use_main.laud`](demo_use_main.laud) + [`demo_use_lib.laud`](demo_use_lib.laud), [`demo_specfirst.laud`](demo_specfirst.laud).
+
+---
+
 ## [v0.5.1] — 2026-05-09 — module-qualified stdlib
 
 ### Added

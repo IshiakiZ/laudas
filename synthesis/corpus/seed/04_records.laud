@@ -1,0 +1,15 @@
+; corpus seed — record types, field access, dedupe by derived key
+
+type User { id: int, name: str, role: str }
+
+
+fn unique_roles
+vis appearing
+eff pure
+in users: list<User>
+out list<str>
+ex unique_roles([User { id: 1, name: "Mira", role: "engineer" }, User { id: 2, name: "Dara", role: "captain" }, User { id: 3, name: "Cass", role: "engineer" }]) == ["engineer", "captain"]
+ex unique_roles([]) == []
+do
+return users.map(u -> u.role).unique()
+end

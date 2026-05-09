@@ -1,0 +1,25 @@
+[package]
+name = "laudas"
+version = "0.5.2"
+edition = "2024"
+authors = ["Pearce Harshbarger"]
+description = "Laudas — a verification-first programming language for AI generation (Rust port)"
+license = "Apache-2.0"
+repository = "https://github.com/IshiakiZ/laudas"
+
+[[bin]]
+name = "laudas"
+path = "src/main.rs"
+
+[dependencies]
+# z3 = "0.13"               # Z3 Rust bindings — enable once port reaches voronin stage
+# anyhow = "1"
+# clap = { version = "4", features = ["derive"] }
+# serde = { version = "1", features = ["derive"] }
+# serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

@@ -1,0 +1,40 @@
+; v0.5.2 demo — spec-first inversion.
+;
+; Each `fn` has an empty `do` ... `end` block. Run:
+;
+;   laudas request-body demo_specfirst.laud
+;
+; This sends each spec to Claude (requires ANTHROPIC_API_KEY in env),
+; which generates a body. The result is written to demo_specfirst.filled.laud.
+; Then verify with:
+;
+;   laudas demo_specfirst.filled.laud
+;
+; voronin proves the generated body satisfies the spec, or finds a counterexample
+; that the model can use to retry.
+
+
+fn safe_subtract
+vis appearing
+eff pure
+in a: int
+in b: int
+out int?
+ex safe_subtract(10, 3) == Some(7)
+ex safe_subtract(3, 10) == None
+ex safe_subtract(5, 5) == Some(0)
+ens result.is_some() iff a >= b
+do
+end
+
+
+fn list_doubled
+vis appearing
+eff pure
+in xs: list<int>
+out list<int>
+ex list_doubled([1, 2, 3]) == [2, 4, 6]
+ex list_doubled([]) == []
+ex list_doubled([0, -1, 5]) == [0, -2, 10]
+do
+end

@@ -261,7 +261,9 @@ def _find_top_word(s: str, words: tuple[str, ...]) -> tuple[int, str]:
 
 def sym_execute_body(fn: Function, env: SymEnv) -> Any:
     """Build a Z3 expression representing the body's return value.
-    Supported pattern:
+    Supported pattern (v0.5.2):
+        let NAME = EXPR        ; bind to env (in declaration order)
+        let NAME = EXPR
         if COND { return EXPR }
         if COND { return EXPR }
         ...
@@ -272,12 +274,27 @@ def sym_execute_body(fn: Function, env: SymEnv) -> Any:
     if not stmts:
         raise NotSupported("empty body")
 
-    last = stmts[-1].strip()
+    # Walk statements: process `let` bindings into the env, collect if-return + final-return.
+    let_re = re.compile(r"^let\s+([A-Za-z_]\w*)\s*=\s*(.+)$", flags=re.DOTALL)
+    flow_stmts: list[str] = []
+    for stmt in stmts:
+        s = stmt.strip()
+        m = let_re.match(s)
+        if m:
+            name, expr = m.groups()
+            env.syms[name] = sym_eval(expr.strip(), env)
+            continue
+        flow_stmts.append(stmt)
+
+    if not flow_stmts:
+        raise NotSupported("body has only let-bindings; missing a `return`")
+
+    last = flow_stmts[-1].strip()
     if not last.startswith("return "):
         raise NotSupported(f"body must end with `return EXPR`, got {last!r}")
     result = sym_eval(last[7:].strip(), env)
 
-    for stmt in reversed(stmts[:-1]):
+    for stmt in reversed(flow_stmts[:-1]):
         s = stmt.strip()
         m = re.match(
             r"^if\s+(.+?)\s*\{\s*return\s+(.+?)\s*\}\s*$",
@@ -286,7 +303,7 @@ def sym_execute_body(fn: Function, env: SymEnv) -> Any:
         )
         if not m:
             raise NotSupported(
-                f"only `if EXPR {{ return EXPR }}` early-returns and a final `return EXPR` are supported in v0.1; got {s!r}"
+                f"only `let`, `if EXPR {{ return EXPR }}` early-returns and a final `return EXPR` are supported in v0.5.2; got {s!r}"
             )
         cond_str, ret_str = m.groups()
         cond = sym_eval(cond_str, env)

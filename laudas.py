@@ -87,7 +87,19 @@ class ParseError(Exception):
         self.line = line
 
 
-def parse_file(path: str) -> tuple[list[Function], list[TypeAlias]]:
+def parse_file(path: str, _loaded: Optional[set[str]] = None) -> tuple[list[Function], list[TypeAlias]]:
+    """Parse a `.laud` file. Recursively resolves `use "PATH"` directives at the top.
+
+    `_loaded` tracks already-loaded absolute paths to break cycles."""
+    import os
+    if _loaded is None:
+        _loaded = set()
+    abs_path = os.path.abspath(path)
+    if abs_path in _loaded:
+        return [], []
+    _loaded.add(abs_path)
+    base_dir = os.path.dirname(abs_path)
+
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
     lines = text.split("\n")
@@ -102,6 +114,25 @@ def parse_file(path: str) -> tuple[list[Function], list[TypeAlias]]:
             continue
         if stripped.startswith("module "):
             # ignored in v0
+            i += 1
+            continue
+        if stripped.startswith("use "):
+            rest = stripped[4:].strip()
+            m = re.match(r'^"([^"]+)"\s*$', rest)
+            if not m:
+                raise ParseError(
+                    f"malformed use directive: expected `use \"PATH\"`, got {stripped!r}",
+                    i + 1,
+                )
+            inc_path = m.group(1)
+            if not os.path.isabs(inc_path):
+                inc_path = os.path.join(base_dir, inc_path)
+            try:
+                inc_fns, inc_types = parse_file(inc_path, _loaded)
+            except FileNotFoundError:
+                raise ParseError(f"`use` cannot find file: {inc_path}", i + 1)
+            functions.extend(inc_fns)
+            types.extend(inc_types)
             i += 1
             continue
         if stripped.startswith("fn "):
@@ -394,6 +425,10 @@ def _list_fold(xs: list, init: Any, fn: Any) -> Any:
 # eval_expr consults it to disambiguate `Name { ... }` record literals
 # from `if EXPR { ... }` body statements.
 TYPE_ALIASES: dict[str, TypeAlias] = {}
+
+# Module-level registry of functions, populated by check_file(). eval_expr
+# consults it to dispatch bare-function calls like `manhattan(a, b)`.
+FUNCTIONS: dict[str, "Function"] = {}
 
 
 def _list_at(xs: list, i: int) -> Any:
@@ -843,6 +878,15 @@ def eval_expr(expr: str, env: dict[str, Any]) -> Any:
     # 6. Some(EXPR)
     if s.startswith("Some(") and s.endswith(")") and balanced(s):
         return ("Some", eval_expr(s[5:-1], env))
+
+    # 6b. Bare function call: NAME(args) where NAME is a registered Laudas function
+    fc = re.match(r"^([A-Za-z_]\w*)\((.*)\)$", s, flags=re.DOTALL)
+    if fc and balanced(s):
+        name = fc.group(1)
+        args_str = fc.group(2)
+        if name in FUNCTIONS:
+            args = [eval_expr(a, env) for a in split_top_level_commas(args_str)] if args_str.strip() else []
+            return run_body(FUNCTIONS[name], args)
 
     # 7. None
     if s == "None":
@@ -1370,6 +1414,212 @@ def show_file(path: str) -> int:
     return 0
 
 
+# ---------- Spec-first inversion: `mira request-body` ----------
+#
+# For each function with an empty `do` ... `end` block, ask Claude to
+# generate a body that satisfies the spec, then write the result to a
+# new .filled.laud file. The user follows up with `laudas FILE.filled.laud`
+# to verify the generated bodies via voronin.
+
+_REQUEST_BODY_PROMPT_TEMPLATE = """You are completing a function body in Laudas, a verification-first programming language.
+
+Wire-format slot grammar:
+- `fn NAME` — function name
+- `vis appearing|disappearing` — visibility
+- `eff pure|io|panics|nondet|...` — effect list
+- `for INTERFACE` — optional, if implementing a trait
+- `in NAME: TYPE` — input parameter (one per line)
+- `out TYPE` — output type
+- `ex EXAMPLE` — concrete example: `funcname(args) == expected`
+- `req PRECOND` — precondition (boolean expression)
+- `ens POSTCOND` — postcondition over `result` and parameters
+- `prose "..."` — natural-language contract
+- `do` ... body lines ... `end`
+
+Body language:
+- Statements: `let NAME = EXPR`, `if EXPR {{ STMT }}`, `return EXPR`
+- Expressions: int arithmetic, comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`), `&&`, `||`, `Some(x)`, `None`, list literals `[a, b]`, single-arg arrow lambdas `x -> EXPR`, method chains `xs.filter(...).map(...)`
+- Module-qualified calls: `text.split(s, sep)`, `text.to_json(v)`, `arith.min(a, b)`, `arith.max(a, b)`, `ledger.range(n)`, `archive.read(path)`
+- List methods: `.length()`, `.sum()`, `.first()`, `.last()`, `.at(i)`, `.tail()`, `.take(n)`, `.skip(n)`, `.unique()`, `.sort()`, `.sort_by(fn)`, `.dedupe_by(fn)`, `.filter(pred)`, `.map(fn)`, `.contains(x)`, `.reverse()`
+- Str methods: `.length()`, `.upper()`, `.lower()`, `.contains(sub)`, `.starts_with(p)`, `.ends_with(p)`, `.trim()`, `.split(sep)`
+- Field access on records: `record.field` (no parens)
+
+Available type declarations in this file:
+{type_decls}
+
+Complete the body of this function:
+
+```laudas
+{fn_source}
+```
+
+Output ONLY the body lines that should appear between `do` and `end`. One statement per line. NO prose, NO markdown fences, NO `do`/`end` markers. Just the statements."""
+
+
+def _format_type_alias_for_prompt(ta: TypeAlias) -> str:
+    fields = ", ".join(f"{f.name}: {f.type.base}" for f in ta.fields)
+    return f"type {ta.name} {{ {fields} }}"
+
+
+def _format_fn_for_prompt(fn: Function) -> str:
+    lines = [f"fn {fn.name}"]
+    if fn.vis:
+        lines.append(f"vis {fn.vis}")
+    if fn.for_iface:
+        lines.append(f"for {fn.for_iface}")
+    if fn.eff:
+        lines.append(f"eff {fn.eff}")
+    for p in fn.ins:
+        type_str = p.type.base
+        if p.type.refinement:
+            type_str = f"{p.type.base} {{ {p.type.refinement} }}"
+        lines.append(f"in {p.name}: {type_str}")
+    if fn.out:
+        out_str = fn.out.base
+        if fn.out.refinement:
+            out_str = f"{fn.out.base} {{ {fn.out.refinement} }}"
+        lines.append(f"out {out_str}")
+    for ex in fn.exs:
+        lines.append(f"ex {ex}")
+    for r in fn.reqs:
+        lines.append(f"req {r}")
+    for e in fn.enses:
+        lines.append(f"ens {e}")
+    if fn.prose:
+        lines.append(f'prose "{fn.prose}"')
+    lines.append("do")
+    lines.append("end")
+    return "\n".join(lines)
+
+
+def _clean_body_response(text: str) -> list[str]:
+    """Extract clean body lines from Claude's response. Strip markdown fences,
+    blank lines, and the `do`/`end` markers if Claude included them."""
+    lines = text.split("\n")
+    out: list[str] = []
+    in_fence = False
+    for raw in lines:
+        s = raw.rstrip()
+        stripped = s.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if not stripped:
+            continue
+        if stripped in ("do", "end"):
+            continue
+        out.append(s)
+    return out
+
+
+def _insert_body_in_source(source: str, fn_name: str, body_lines: list[str]) -> str:
+    """Find `fn fn_name` ... `do` ... `end`, insert body_lines between do and end."""
+    lines = source.split("\n")
+    do_idx = -1
+    end_idx = -1
+    in_fn = False
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if s == f"fn {fn_name}":
+            in_fn = True
+            continue
+        if in_fn and s.startswith("fn ") and s != f"fn {fn_name}":
+            # next function before we found do/end — give up
+            break
+        if in_fn and s == "do":
+            do_idx = i
+            continue
+        if in_fn and do_idx >= 0 and s == "end":
+            end_idx = i
+            break
+    if do_idx < 0 or end_idx < 0:
+        return source
+    new_lines = lines[: do_idx + 1] + body_lines + lines[end_idx:]
+    return "\n".join(new_lines)
+
+
+def request_body_file(path: str, output_path: Optional[str] = None) -> int:
+    """The `laudas request-body FILE.laud` entrypoint."""
+    import os
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        print("error: ANTHROPIC_API_KEY not set in environment", file=sys.stderr)
+        print("  PowerShell:  $env:ANTHROPIC_API_KEY = 'sk-ant-...'", file=sys.stderr)
+        print("  bash/zsh:    export ANTHROPIC_API_KEY='sk-ant-...'", file=sys.stderr)
+        print("  Get a key:   https://console.anthropic.com/settings/keys", file=sys.stderr)
+        return 3
+
+    try:
+        import anthropic
+    except ImportError:
+        print("error: anthropic SDK not installed", file=sys.stderr)
+        print("  install: pip install anthropic", file=sys.stderr)
+        return 3
+
+    try:
+        fns, types = parse_file(path)
+    except ParseError as e:
+        print(f"parse error at line {e.line}: {e.msg}", file=sys.stderr)
+        return 2
+
+    # Register any type aliases so source rendering picks them up.
+    for ta in types:
+        TYPE_ALIASES[ta.name] = ta
+
+    candidates = [fn for fn in fns if not fn.body and fn.extern is None]
+    if not candidates:
+        print(f"  no functions with empty `do` blocks in {path} — nothing to fill")
+        return 0
+
+    print(f"  laudas request-body  ·  {len(candidates)} function(s) need bodies")
+    print()
+
+    client = anthropic.Anthropic(api_key=api_key)
+    model = os.environ.get("LAUDAS_MODEL", "claude-sonnet-4-5")
+    type_decls = "\n".join(_format_type_alias_for_prompt(t) for t in types) or "(none)"
+
+    with open(path, "r", encoding="utf-8") as f:
+        source = f.read()
+
+    modified = source
+    for fn in candidates:
+        print(f"  ▸  asking {model} for body of `{fn.name}`...")
+        prompt = _REQUEST_BODY_PROMPT_TEMPLATE.format(
+            type_decls=type_decls,
+            fn_source=_format_fn_for_prompt(fn),
+        )
+        try:
+            response = client.messages.create(
+                model=model,
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = response.content[0].text
+        except Exception as e:
+            print(f"     ✗ API call failed: {e}")
+            continue
+        body_lines = _clean_body_response(text)
+        if not body_lines:
+            print(f"     ✗ Claude returned no usable body lines")
+            continue
+        modified = _insert_body_in_source(modified, fn.name, body_lines)
+        print(f"     ✓ inserted {len(body_lines)} body line(s)")
+
+    if output_path is None:
+        if path.endswith(".laud"):
+            output_path = path[:-5] + ".filled.laud"
+        else:
+            output_path = path + ".filled"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(modified)
+
+    print()
+    print(f"  wrote {output_path}")
+    print(f"  next:  laudas {output_path}    to verify the generated bodies")
+    return 0
+
+
 # ---------- CLI ----------
 
 def check_file(path: str) -> int:
@@ -1407,9 +1657,13 @@ def check_file(path: str) -> int:
         print(f"  voronin verifier: not available — install z3-solver")
     print()
 
-    # Register type aliases globally so eval_expr can recognize record literals.
+    # Reset and register module-level state so eval_expr can resolve names.
+    TYPE_ALIASES.clear()
+    FUNCTIONS.clear()
     for ta in types:
         TYPE_ALIASES[ta.name] = ta
+    for fn in fns:
+        FUNCTIONS[fn.name] = fn
 
     failures = 0
     for fn in fns:
@@ -1459,16 +1713,32 @@ def check_file(path: str) -> int:
 
 def main() -> int:
     args = sys.argv[1:]
-    if not args:
-        print("usage: python laudas.py [--show] FILE.laud", file=sys.stderr)
-        return 64
+    if not args or args[0] in ("-h", "--help"):
+        print("usage:", file=sys.stderr)
+        print("  laudas FILE.laud                  parse + run examples + verify", file=sys.stderr)
+        print("  laudas --show FILE.laud           render as Laudan archive entries", file=sys.stderr)
+        print("  laudas request-body FILE.laud     fill empty `do` blocks via Claude", file=sys.stderr)
+        print("                                    (requires ANTHROPIC_API_KEY)", file=sys.stderr)
+        return 0 if args and args[0] in ("-h", "--help") else 64
     if args[0] == "--show":
         if len(args) != 2:
-            print("usage: python laudas.py --show FILE.laud", file=sys.stderr)
+            print("usage: laudas --show FILE.laud", file=sys.stderr)
             return 64
         return show_file(args[1])
+    if args[0] == "request-body":
+        if len(args) < 2:
+            print("usage: laudas request-body FILE.laud [-o OUTPUT.laud]", file=sys.stderr)
+            return 64
+        out = None
+        if "-o" in args:
+            o_idx = args.index("-o")
+            if o_idx + 1 >= len(args):
+                print("usage: laudas request-body FILE.laud [-o OUTPUT.laud]", file=sys.stderr)
+                return 64
+            out = args[o_idx + 1]
+        return request_body_file(args[1], out)
     if len(args) != 1:
-        print("usage: python laudas.py [--show] FILE.laud", file=sys.stderr)
+        print("usage: laudas [--show | request-body] FILE.laud", file=sys.stderr)
         return 64
     return check_file(args[0])
 
