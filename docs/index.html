@@ -429,6 +429,58 @@ ver  ✗  ens result.is_some() iff b != 0
       </ul>
     </section>
 
+    <!-- ---------- runnable programs ---------- -->
+    <section>
+      <h2>Laudas programs run</h2>
+      <p>
+        A <code>fn main</code> is the entry point. <code>laudas run</code> calls it with
+        the CLI arguments and uses its int return value as the exit code.
+        Combined with the <code>io</code> and <code>text</code> modules and
+        Python FFI, that's enough to build real shell tools.
+      </p>
+
+      <p>The first one in the repo: <a href="https://github.com/IshiakiZ/laudas/blob/main/examples/csv2json.laud"><code>examples/csv2json.laud</code></a>, twenty lines of Laudas:</p>
+
+<pre>type Crew { name: str, role: str, ship: str }
+
+fn parse_row
+vis appearing
+eff pure
+in row: str
+out Crew
+ex parse_row("Mira,engineer,Voronin") == Crew { name: "Mira", role: "engineer", ship: "Voronin" }
+do
+let parts = text.split(row, ",")
+return Crew { name: parts.at(0), role: parts.at(1), ship: parts.at(2) }
+end
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let rows = text.split(raw, "\n")
+let crew = rows.skip(1).filter(r -> r.length() > 0).map(r -> parse_row(r))
+io.println(text.to_json(crew))
+return 0
+end</pre>
+
+      <p>Pipe a CSV in, get JSON out:</p>
+
+<pre>$ Get-Content examples/crew.csv | laudas run examples/csv2json.laud
+[{"name":"Mira","role":"engineer","ship":"Voronin"},
+ {"name":"Dara","role":"captain","ship":"Osei"},
+ {"name":"Cass","role":"navigator","ship":"Telles"}]</pre>
+
+      <p>
+        The <code>parse_row</code> function carries its own <code>ex</code> slots, so
+        <code>laudas examples/csv2json.laud</code> (no piping) still verifies the
+        parsing logic end-to-end. The two modes — <em>verify the spec</em> and
+        <em>run the program</em> — coexist on the same file.
+      </p>
+    </section>
+
     <!-- ---------- install ---------- -->
     <section>
       <h2>Install</h2>
@@ -438,9 +490,10 @@ ver  ✗  ens result.is_some() iff b != 0
         Download <a href="https://github.com/IshiakiZ/laudas/releases/latest">laudas.exe</a>
         (~18 MB), drop it on PATH, run it.
       </p>
-<pre>laudas demo_fixed.laud          # parse + run examples + verify
-laudas --show file.laud         # render as Laudan archive entries
-laudas request-body spec.laud   # fill empty `do` blocks via Claude</pre>
+<pre>laudas demo_fixed.laud              # parse + run examples + verify
+laudas --show file.laud             # render as Laudan archive entries
+laudas run program.laud [ARGS...]   # execute the program's `main`
+laudas request-body spec.laud       # fill empty `do` blocks via Claude</pre>
 
       <h3>From source (any OS with Python 3.10+)</h3>
 <pre>git clone https://github.com/IshiakiZ/laudas
