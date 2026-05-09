@@ -510,6 +510,7 @@ def _list_dedupe_by(xs: list, key_fn: Any) -> list:
 METHODS: dict[str, dict[str, Any]] = {
     "list": {
         "length":    lambda xs: len(xs),
+        "is_empty":  lambda xs: len(xs) == 0,
         "sum":       lambda xs: sum(xs),
         "min":       lambda xs: min(xs) if xs else ("None",),
         "max":       lambda xs: max(xs) if xs else ("None",),
