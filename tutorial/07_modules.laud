@@ -1,0 +1,32 @@
+; Tutorial 07 — Multi-file projects via `use`
+;
+; Real Laudas projects span more than one file. The `use "PATH"` directive
+; at the top of a file recursively loads another file's top-level
+; declarations into the current namespace. Cycle-safe.
+;
+; This file uses tutorial/07_lib.laud (a tiny "library") below. Run:
+;
+;   laudas tutorial/07_modules.laud
+;
+; You'll see manhattan + closer_to_origin both verified, even though
+; manhattan lives in a different file.
+
+
+use "07_lib.laud"
+
+
+fn closer_to_origin
+vis appearing
+eff pure
+in a: Coordinate
+in b: Coordinate
+out Coordinate
+ex closer_to_origin(Coordinate { lat: 1, lng: 1 }, Coordinate { lat: 5, lng: 5 }) == Coordinate { lat: 1, lng: 1 }
+ex closer_to_origin(Coordinate { lat: 10, lng: 0 }, Coordinate { lat: 0, lng: 3 }) == Coordinate { lat: 0, lng: 3 }
+do
+let origin = Coordinate { lat: 0, lng: 0 }
+let da = manhattan(a, origin)
+let db = manhattan(b, origin)
+if da <= db { return a }
+return b
+end

@@ -1,0 +1,29 @@
+; v0.5.11 demo — voronin verifies .contains() on strings AND on lists in ens.
+
+fn marker_present
+vis appearing
+eff pure
+in s: str
+in marker: str
+out bool
+ex marker_present("hello world", "world") == true
+ex marker_present("nothing here", "abc") == false
+ens result == s.contains(marker)
+do
+return s.contains(marker)
+end
+
+
+fn list_has
+vis appearing
+eff pure
+in xs: list<int>
+in needle: int
+out bool
+ex list_has([1, 2, 3], 2) == true
+ex list_has([1, 2, 3], 99) == false
+ex list_has([], 0) == false
+ens result == xs.contains(needle)
+do
+return xs.contains(needle)
+end

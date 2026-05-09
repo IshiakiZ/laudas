@@ -1,0 +1,65 @@
+; calc_rpn.laud — Reverse Polish Notation calculator.
+;
+; Reads space-separated tokens from stdin. Each token is either an int
+; (push) or one of + - * / (pop two, apply, push result). After all tokens
+; are consumed, prints the top of the stack.
+;
+; Run:
+;   echo "3 4 + 2 *" | laudas run examples/calc_rpn.laud   ; (3+4)*2 = 14
+;   echo "10 5 -" | laudas run examples/calc_rpn.laud      ; 10-5 = 5
+
+
+; Apply one token: either a number to push, or an operator on the top two.
+; Returns the new stack.
+fn step
+vis appearing
+eff pure
+in stack: list<int>
+in token: str
+out list<int>
+ex step([3, 4], "+") == [7]
+ex step([10, 5], "-") == [5]
+ex step([3, 4], "*") == [12]
+ex step([12, 4], "/") == [3]
+ex step([], "5") == [5]
+ex step([5], "10") == [5, 10]
+do
+if token == "+" {
+  let n = stack.length()
+  return [stack.at(n - 2) + stack.at(n - 1)]
+}
+if token == "-" {
+  let n = stack.length()
+  return [stack.at(n - 2) - stack.at(n - 1)]
+}
+if token == "*" {
+  let n = stack.length()
+  return [stack.at(n - 2) * stack.at(n - 1)]
+}
+if token == "/" {
+  let n = stack.length()
+  return [stack.at(n - 2) / stack.at(n - 1)]
+}
+return stack + [text.to_int(token)]
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = text.trim(io.read_stdin())
+if raw.length() == 0 {
+  io.eprintln("usage: echo \"3 4 +\" | laudas run examples/calc_rpn.laud")
+  return 64
+}
+let tokens = text.split(raw, " ").filter(t -> t.length() > 0)
+let final = tokens.fold([], (stack, t) -> step(stack, t))
+if final.is_empty() {
+  io.eprintln("error: no result")
+  return 1
+}
+io.println(final.last())
+return 0
+end

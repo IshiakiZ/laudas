@@ -1,0 +1,23 @@
+; grep.laud — print lines from stdin that contain a substring.
+;
+; Run:  Get-Content file.txt | laudas run examples/grep.laud PATTERN
+
+
+fn main
+vis appearing
+eff io
+in args: list<str>
+out int
+do
+if args.length() == 0 {
+  io.eprintln("usage: laudas run examples/grep.laud PATTERN")
+  return 64
+}
+let pattern = args.first()
+let raw = io.read_stdin()
+let lines = text.split(raw, "\n")
+let matches = lines.filter(l -> l.contains(pattern))
+io.println(text.join(matches, "\n"))
+if matches.is_empty() { return 1 }
+return 0
+end

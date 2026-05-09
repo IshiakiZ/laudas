@@ -17,6 +17,10 @@ These are **real**, not toys. They use real Python under the hood for things Lau
 | [`json_pretty.laud`](json_pretty.laud) | 22 | indent JSON via Python's json.loads | `echo '{"a":1}' \| laudas run json_pretty.laud` |
 | [`bars.laud`](bars.laud) | 25 | ASCII horizontal bar chart from `LABEL COUNT` lines | `echo "Mira 12`nDara 8" \| laudas run bars.laud` |
 | [`stats.laud`](stats.laud) | 50 | count/min/max/sum/mean for a `name,value` CSV | `Get-Content scores.csv \| laudas run stats.laud` |
+| [`word_freq.laud`](word_freq.laud) | 36 | top-20 word frequencies (lowercased) from stdin | `Get-Content README.md \| laudas run word_freq.laud` |
+| [`grep.laud`](grep.laud) | 16 | print stdin lines containing PATTERN | `cat file.txt \| laudas run grep.laud TODO` |
+| [`cat.laud`](cat.laud) | 9 | echo stdin to stdout | `cat file \| laudas run cat.laud` |
+| [`calc_rpn.laud`](calc_rpn.laud) | 49 | reverse-Polish calculator | `echo "3 4 + 2 *" \| laudas run calc_rpn.laud` |
 
 ## They compose
 

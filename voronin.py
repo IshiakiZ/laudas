@@ -223,35 +223,72 @@ def sym_eval(expr: str, env: SymEnv) -> Any:
             right = sym_eval(right_str, env)
             return _apply(op, left, right)
 
-    # Higher-order Seq methods: .map(...) and .filter(...)
-    # These are over-approximated symbolically:
-    #   xs.map(f)    ≈ a fresh Seq with the same length as xs
-    #   xs.filter(p) ≈ a fresh Seq with length in [0, Length(xs)]
-    # That's enough to verify many ens conditions about result.length(),
-    # without modeling the predicate or the function symbolically.
-    # Placed AFTER binary ops so `result == xs.map(f)` parses as the equality.
-    m = re.match(r"^(.+)\.(map|filter)\((.+)\)$", s, flags=re.DOTALL)
-    if m:
-        prefix_str = m.group(1)
-        method = m.group(2)
-        if _balanced(prefix_str):
-            try:
-                seq_val = sym_eval(prefix_str, env)
-            except NotSupported:
-                seq_val = None
-            if seq_val is not None and hasattr(seq_val, "sort"):
-                try:
-                    seq_len = z3.Length(seq_val)  # validates it's a Seq
-                except (z3.Z3Exception, TypeError):
-                    seq_len = None
-                if seq_len is not None:
-                    fresh = z3.FreshConst(seq_val.sort())
-                    if method == "map":
-                        env.assumptions.append(z3.Length(fresh) == seq_len)
-                    else:  # filter
-                        env.assumptions.append(z3.Length(fresh) <= seq_len)
-                        env.assumptions.append(z3.Length(fresh) >= 0)
-                    return fresh
+    # Postfix method-call detection (for .map / .filter / .contains).
+    # Done with a real paren-balance walker so chains like
+    # `xs.filter(p).length()` parse as `(xs.filter(p)).length()` — not as
+    # `xs.filter(p).length()` with the whole chain crammed into args.
+    if s.endswith(")"):
+        # Walk backwards to find the `(` matching the trailing `)`.
+        depth = 0
+        open_idx = -1
+        for i in range(len(s) - 1, -1, -1):
+            c = s[i]
+            if c == ")":
+                depth += 1
+            elif c == "(":
+                depth -= 1
+                if depth == 0:
+                    open_idx = i
+                    break
+        if open_idx > 0:
+            # Walk back from `(` to read the method name.
+            mname_end = open_idx
+            mname_start = mname_end
+            while mname_start > 0 and (s[mname_start - 1].isalnum() or s[mname_start - 1] == "_"):
+                mname_start -= 1
+            method_name = s[mname_start:mname_end]
+            if method_name and mname_start > 0 and s[mname_start - 1] == ".":
+                prefix_str = s[: mname_start - 1]
+                args_str = s[open_idx + 1: -1]
+
+                # .map(...) and .filter(...) over-approximation.
+                #   xs.map(f)    ≈ a fresh Seq with the same length as xs
+                #   xs.filter(p) ≈ a fresh Seq with length in [0, Length(xs)]
+                if method_name in ("map", "filter") and prefix_str:
+                    try:
+                        seq_val = sym_eval(prefix_str, env)
+                    except NotSupported:
+                        seq_val = None
+                    if seq_val is not None and hasattr(seq_val, "sort"):
+                        try:
+                            seq_len = z3.Length(seq_val)
+                        except (z3.Z3Exception, TypeError):
+                            seq_len = None
+                        if seq_len is not None:
+                            fresh = z3.FreshConst(seq_val.sort())
+                            if method_name == "map":
+                                env.assumptions.append(z3.Length(fresh) == seq_len)
+                            else:
+                                env.assumptions.append(z3.Length(fresh) <= seq_len)
+                                env.assumptions.append(z3.Length(fresh) >= 0)
+                            return fresh
+
+                # .contains(arg): String.Contains for strings, Seq.Contains(_, Unit(elem)) for lists.
+                if method_name == "contains" and prefix_str and args_str:
+                    try:
+                        prefix_val = sym_eval(prefix_str, env)
+                        arg_val = sym_eval(args_str, env)
+                    except NotSupported:
+                        prefix_val = None
+                    if prefix_val is not None and hasattr(prefix_val, "sort"):
+                        sort_str = str(prefix_val.sort())
+                        try:
+                            if sort_str == "String":
+                                return z3.Contains(prefix_val, arg_val)
+                            if sort_str.startswith("Seq(") or sort_str.startswith("(Seq "):
+                                return z3.Contains(prefix_val, z3.Unit(arg_val))
+                        except (z3.Z3Exception, TypeError):
+                            pass
 
     # String / Seq methods: ANY_STRING_OR_LIST_EXPR.length() / .upper() / .lower()
     # Placed AFTER binary ops so `result == s.length()` parses as the equality,

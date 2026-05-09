@@ -22,6 +22,8 @@ If you don't have `laudas` installed yet, see the [main README](../README.md#ins
 | 4 | [`04_collections.laud`](04_collections.laud) | Lists, lambdas, method chains, records, field access, `let` bindings |
 | 5 | [`05_pipeline.laud`](05_pipeline.laud) | A real pipeline: parse → validate → dedupe → sort → JSON. The compression-target demo. |
 | 6 | [`06_runnable.laud`](06_runnable.laud) | `fn main`, `io` module, `laudas run` — Laudas programs as actual CLI tools |
+| 7 | [`07_modules.laud`](07_modules.laud) + [`07_lib.laud`](07_lib.laud) | `use "PATH"` — multi-file projects |
+| 8 | [`08_ffi.laud`](08_ffi.laud) | `extern python "module.func"` — drop into all of PyPI |
 
 ---
 

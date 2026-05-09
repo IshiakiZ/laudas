@@ -510,6 +510,7 @@ def _list_dedupe_by(xs: list, key_fn: Any) -> list:
 METHODS: dict[str, dict[str, Any]] = {
     "list": {
         "length":    lambda xs: len(xs),
+        "is_empty":  lambda xs: len(xs) == 0,
         "sum":       lambda xs: sum(xs),
         "min":       lambda xs: min(xs) if xs else ("None",),
         "max":       lambda xs: max(xs) if xs else ("None",),
@@ -541,6 +542,12 @@ METHODS: dict[str, dict[str, Any]] = {
     },
     "int": {
         "abs":      lambda i: abs(i),
+    },
+    "option": {
+        "is_some":   lambda o: o[0] == "Some",
+        "is_none":   lambda o: o[0] == "None",
+        "unwrap_or": lambda o, default: o[1] if o[0] == "Some" else default,
+        "value":     lambda o: o[1] if o[0] == "Some" else (_ for _ in ()).throw(RuntimeFail("called .value() on None")),
     },
 }
 
@@ -652,12 +659,16 @@ MODULES: dict[str, dict[str, Any]] = {
         "to_int":         _text_to_int,
         "from_int":       _text_from_int,
         "repeat":         lambda s, n: s * max(0, n),
+        "replace":        lambda s, old, new: s.replace(old, new),
     },
     "arith": {
         "abs":      lambda x: abs(x),
         "min":      lambda a, b: min(a, b),
         "max":      lambda a, b: max(a, b),
         "pow":      lambda a, b: a ** b,
+        "sum_of":   lambda xs: sum(xs),
+        "min_of":   lambda xs: min(xs) if xs else ("None",),
+        "max_of":   lambda xs: max(xs) if xs else ("None",),
     },
     "ledger": {
         "range":    _ledger_range,
@@ -1120,12 +1131,20 @@ def balanced(s: str) -> bool:
 def find_binary_op(s: str, ops: tuple[str, ...]) -> tuple[int, str]:
     """Return (index, op) of the rightmost top-level occurrence of any op in `ops`,
     or (-1, '') if none. Rightmost gives left-to-right associativity once we recurse.
-    Top-level skips inside parens/brackets/braces (so `{x: 1+2}` doesn't match `+`)."""
+    Top-level skips inside parens/brackets/braces and inside string literals."""
     depth = 0
+    in_string = False
     best = (-1, "")
     i = 0
     while i < len(s):
         c = s[i]
+        if c == '"' and (i == 0 or s[i - 1] != "\\"):
+            in_string = not in_string
+            i += 1
+            continue
+        if in_string:
+            i += 1
+            continue
         if c in "([{":
             depth += 1
             i += 1
@@ -1164,6 +1183,9 @@ def apply_op(op: str, left: Any, right: Any) -> Any:
         return bool(left) or bool(right)
     # String concatenation with `+`
     if op == "+" and isinstance(left, str) and isinstance(right, str):
+        return left + right
+    # List concatenation with `+`
+    if op == "+" and isinstance(left, list) and isinstance(right, list):
         return left + right
     # Lexicographic string comparison
     if op in ("<", ">", "<=", ">=") and isinstance(left, str) and isinstance(right, str):

@@ -1,0 +1,54 @@
+; word_freq.laud — count word frequencies from stdin.
+;
+; Splits stdin on whitespace, lowercases, drops empties.
+; Output: each unique word with its count, sorted by frequency descending.
+;
+; Run:  Get-Content README.md | laudas run examples/word_freq.laud
+
+
+type Pair { word: str, count: int }
+
+
+fn count_in
+vis appearing
+eff pure
+in xs: list<str>
+in target: str
+out int
+ex count_in(["a", "b", "a"], "a") == 2
+ex count_in([], "x") == 0
+ens result >= 0
+do
+return xs.filter(w -> w == target).length()
+end
+
+
+fn build_pair
+vis appearing
+eff pure
+in word: str
+in all_words: list<str>
+out Pair
+ex build_pair("a", ["a", "b", "a"]) == Pair { word: "a", count: 2 }
+do
+return Pair { word: word, count: count_in(all_words, word) }
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = io.read_stdin()
+let normalized = text.replace(raw, "\n", " ")
+let words = text.split(normalized, " ").map(w -> w.lower()).filter(w -> w.length() > 0)
+if words.is_empty() {
+  io.eprintln("usage: pipe text in. Words are split on whitespace.")
+  return 64
+}
+let pairs = words.unique().map(w -> build_pair(w, words))
+let sorted = pairs.sort_by(p -> p.count).reverse()
+io.println(text.to_json_pretty(sorted.take(20)))
+return 0
+end

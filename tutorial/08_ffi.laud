@@ -1,0 +1,73 @@
+; Tutorial 08 — Foreign function interface (`extern python`)
+;
+; Some things Laudas doesn't (yet) do natively. Rather than rebuilding
+; everything, you can call out to any Python module via the `extern python`
+; slot. This drops you into all of PyPI: requests, numpy, pandas, the
+; Python stdlib, anything pip-installable.
+;
+; The tradeoff: voronin can't symbolically execute foreign code, so it
+; reports the function as "skipped" with the reason. Examples still run
+; (they actually call Python), so you keep behavioral coverage.
+;
+; Run:  laudas tutorial/08_ffi.laud
+
+
+; --- A direct Python stdlib call -----------------------------
+
+fn isqrt
+vis appearing
+eff pure
+in x: int
+out int
+req x >= 0
+ex isqrt(0) == 0
+ex isqrt(9) == 3
+ex isqrt(100) == 10
+extern python "math.isqrt"
+end
+
+
+; --- A Python builtin ---------------------------------------
+
+fn list_max
+vis appearing
+eff pure
+in xs: list<int>
+out int
+ex list_max([3, 1, 4, 1, 5, 9, 2, 6]) == 9
+ex list_max([42]) == 42
+ex list_max([-1, -5, -2]) == -1
+extern python "builtins.max"
+end
+
+
+; --- A pip-installable package would work the same way -------
+; You'd add e.g.
+;
+;     fn http_get
+;     vis appearing
+;     eff io
+;     in url: str
+;     out str
+;     extern python "requests.get"
+;     end
+;
+; ...and `requests` would need to be installed. Same pattern, same UX.
+
+
+; --- And you can mix Laudas + foreign in the same chain ------
+
+fn pythagoras
+vis appearing
+eff pure
+in a: int
+in b: int
+req a >= 0
+req b >= 0
+out int
+ex pythagoras(3, 4) == 5
+ex pythagoras(0, 0) == 0
+ex pythagoras(5, 12) == 13
+do
+return isqrt(a * a + b * b)
+end

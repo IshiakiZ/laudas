@@ -127,10 +127,11 @@ io.println(s)         io.print(s)         io.eprintln(s)
 io.read_line()        io.read_stdin()
 text.split(s, sep)    text.join(xs, sep)  text.contains(s, sub)
 text.upper(s)         text.lower(s)       text.trim(s)
-text.length(s)        text.repeat(s, n)
+text.length(s)        text.repeat(s, n)   text.replace(s, old, new)
 text.parse_csv(s)     text.to_json(v)     text.to_json_pretty(v)
 text.to_int(s)        text.from_int(n)
 arith.abs(x)          arith.min(a, b)     arith.max(a, b)   arith.pow(a, b)
+arith.sum_of(xs)      arith.min_of(xs)    arith.max_of(xs)
 ledger.range(n)       ledger.length(xs)
 archive.read(path)    archive.write(path, content)
 ```
@@ -140,7 +141,7 @@ archive.read(path)    archive.write(path, content)
 ### List
 
 ```laudas
-xs.length()    xs.sum()       xs.min()       xs.max()
+xs.length()    xs.is_empty()  xs.sum()       xs.min()       xs.max()
 xs.first()     xs.last()      xs.at(i)
 xs.contains(x)
 xs.tail()      xs.take(n)     xs.skip(n)
@@ -164,13 +165,12 @@ s.split(sep)
 i.abs()
 ```
 
-### Option<int>
+### Option<T>
 
 ```laudas
-opt.is_some()  opt.is_none()  opt.value()
+opt.is_some()         opt.is_none()         opt.value()
+opt.unwrap_or(default)
 ```
-
-(In `ens` postconditions; runtime support coming.)
 
 ---
 
@@ -197,11 +197,13 @@ laudas request-body FILE.laud     ; fill empty `do` blocks via Claude (needs ANT
 | `ens` postconditions over int / bool / records / Option | ✓ |
 | `iff` and `implies` in postconditions | ✓ |
 | `s.length()`, `xs.length()`, chained methods | ✓ |
+| `s.contains(sub)`, `xs.contains(x)` in ens | ✓ |
+| `xs.filter(...)` / `xs.map(...)` length over-approximation | ✓ |
 | Body shape: `(let | if-return)* return` | ✓ |
 | Output refinement check | ✓ |
 | Counterexample pretty-printed as Laudas syntax | ✓ |
-| Multi-arg lambdas inside body | ✗ (skip with reason) |
-| Higher-order method bodies (`.filter`, `.map`, `.fold`) | ✗ (skip with reason) |
+| `.fold(init, fn)` symbolic execution | ✗ (skip with reason) |
+| Element-wise reasoning about `.filter` / `.map` | ✗ (skip — only length) |
 | `extern python` bodies | ✗ (skip — body is foreign) |
 
 ---

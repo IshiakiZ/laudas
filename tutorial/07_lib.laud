@@ -1,0 +1,21 @@
+; A tiny library file used by tutorial/07_modules.laud.
+; Both `type Coordinate` and `fn manhattan` get pulled into the importing file.
+
+
+type Coordinate { lat: int, lng: int }
+
+
+fn manhattan
+vis appearing
+eff pure
+in p: Coordinate
+in q: Coordinate
+out int
+ex manhattan(Coordinate { lat: 0, lng: 0 }, Coordinate { lat: 3, lng: 4 }) == 7
+ex manhattan(Coordinate { lat: 5, lng: 5 }, Coordinate { lat: 5, lng: 5 }) == 0
+ens result >= 0
+do
+let dlat = arith.abs(p.lat - q.lat)
+let dlng = arith.abs(p.lng - q.lng)
+return dlat + dlng
+end

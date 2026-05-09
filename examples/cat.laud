@@ -1,0 +1,15 @@
+; cat.laud — read stdin, write it to stdout. The simplest possible tool.
+;
+; Useful as both a smoke test and a building block for piping demos.
+;
+; Run:  Get-Content file.txt | laudas run examples/cat.laud
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+io.print(io.read_stdin())
+return 0
+end

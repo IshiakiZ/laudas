@@ -4,6 +4,47 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.11] — 2026-05-09 — 25-task batch: contains, four tools, two tutorials, ARCHITECTURE.md
+
+A planned 25-task batch landing all together.
+
+### Added — verifier (voronin)
+
+- **`.contains(...)`** in pre/postconditions for both strings and lists. `s.contains(sub)` becomes `z3.Contains(s, sub)`; `xs.contains(elem)` becomes `z3.Contains(xs, z3.Unit(elem))`. Demo: [demo_contains_verify.laud](demo_contains_verify.laud).
+
+### Added — language
+
+- **`xs.is_empty()`** on lists. Closes [#1](https://github.com/IshiakiZ/laudas/issues/1).
+- **`text.replace(s, old, new)`** in the text module. Closes [#2](https://github.com/IshiakiZ/laudas/issues/2).
+- **`option.unwrap_or(default)`** runtime method (plus is_some/is_none/value).
+- **`arith.sum_of(xs)` / `arith.min_of(xs)` / `arith.max_of(xs)`** module-level wrappers.
+- **List concatenation with `+`** — `[1, 2] + [3]` works in body code.
+- **String-aware binary-op finder** — `+` inside `"+"` is no longer matched as a top-level operator. (Subtle bug found while writing calc_rpn.)
+
+### Added — tools
+
+Four new examples bring the toolkit to twelve:
+
+- **[`examples/word_freq.laud`](examples/word_freq.laud)** — top-N word frequencies from stdin, lowercased, JSON output.
+- **[`examples/grep.laud`](examples/grep.laud)** — print stdin lines containing a substring; exit 1 if no match.
+- **[`examples/cat.laud`](examples/cat.laud)** — echo stdin to stdout; the simplest possible Laudas program.
+- **[`examples/calc_rpn.laud`](examples/calc_rpn.laud)** — Reverse-Polish calculator. Verified `step` function (six examples). `echo "3 4 + 2 *" | laudas run examples/calc_rpn.laud` → `14`.
+
+### Added — tutorial
+
+Two new steps bring the walkthrough to eight:
+
+- **[`tutorial/07_modules.laud`](tutorial/07_modules.laud)** + [`tutorial/07_lib.laud`](tutorial/07_lib.laud) — multi-file projects via `use "PATH"`.
+- **[`tutorial/08_ffi.laud`](tutorial/08_ffi.laud)** — `extern python "module.func"` walkthrough; ends with `pythagoras` mixing Laudas + foreign code.
+
+### Added — docs
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — laudas.py + voronin.py file tour, "where to add new features" table, the `__main__`-vs-`laudas` lookup gotcha explained.
+- **CHEATSHEET** updated with all new methods/modules.
+- **README** + **examples/README** + **tutorial/README** all updated.
+
+---
+
 ## [v0.5.10] — 2026-05-09 — verifier expressivity + LLM-shaped counterexamples
 
 ### Added — verifier (voronin)
