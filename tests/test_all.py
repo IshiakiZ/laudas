@@ -43,6 +43,7 @@ PASS_FILES = [
     "examples/wc.laud",
     "examples/sort.laud",
     "examples/json_pretty.laud",
+    "demo_string_verify.laud",
 ]
 
 # Intentionally-broken demos that MUST fail (CI flags it as a regression
@@ -58,6 +59,7 @@ MUST_VERIFY_FILES = [
     "demo_fixed.laud",            # ens result.is_some() iff b != 0
     "demo_let_verify.laud",       # ens result <= 100, with let-bindings
     "demo_record_verify.laud",    # ens result >= 0 over record fields
+    "demo_string_verify.laud",    # ens over s.length(), s.upper().length()
     "tutorial/03_verifier.laud",  # the tutorial step that introduces ens
 ]
 

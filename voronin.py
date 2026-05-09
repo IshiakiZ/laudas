@@ -213,6 +213,26 @@ def sym_eval(expr: str, env: SymEnv) -> Any:
             right = sym_eval(right_str, env)
             return _apply(op, left, right)
 
+    # String methods: ANY_STRING_EXPR.length() / .upper() / .lower()
+    # Placed AFTER binary ops so `result == s.length()` parses as the equality,
+    # not as `(result == s).length()`. The prefix is recursively evaluated, so
+    # chains like `s.upper().length()` work.
+    for suffix in (".length()", ".upper()", ".lower()"):
+        if s.endswith(suffix):
+            prefix_str = s[: -len(suffix)]
+            if prefix_str and _balanced(prefix_str):
+                try:
+                    prefix_val = sym_eval(prefix_str, env)
+                except NotSupported:
+                    continue
+                if hasattr(prefix_val, "sort") and str(prefix_val.sort()) == "String":
+                    if suffix == ".length()":
+                        return z3.Length(prefix_val)
+                    # upper/lower: opaque string-to-string function (Z3 doesn't model case folding)
+                    name = "_upper" if suffix == ".upper()" else "_lower"
+                    f = z3.Function(name, z3.StringSort(), z3.StringSort())
+                    return f(prefix_val)
+
     # Bare identifier
     if re.match(r"^[A-Za-z_]\w*$", s):
         if s in env.syms:

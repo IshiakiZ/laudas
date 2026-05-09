@@ -1,0 +1,48 @@
+; v0.5.8 demo — voronin can now verify ens conditions over string methods.
+;
+; z3.Length() backs s.length(); s.upper() / s.lower() are modeled as opaque
+; string-to-string functions (we only assert what z3 can prove, not what we
+; happen to know about ASCII case folding).
+;
+; Run:  laudas demo_string_verify.laud
+
+
+fn double_length
+vis appearing
+eff pure
+in s: str
+out int
+ex double_length("hello") == 10
+ex double_length("") == 0
+ex double_length("a") == 2
+ens result >= 0
+ens result == s.length() * 2
+do
+return s.length() * 2
+end
+
+
+fn at_least_length
+vis appearing
+eff pure
+in s: str
+out int
+ex at_least_length("abc") == 3
+ex at_least_length("") == 0
+ens result >= 0
+ens result == s.length()
+do
+return s.length()
+end
+
+
+fn shouted_length
+vis appearing
+eff pure
+in s: str
+out int
+ex shouted_length("yo") == 2
+ens result >= 0
+do
+return s.upper().length()
+end
