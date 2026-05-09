@@ -1,0 +1,44 @@
+; v0.5.10 demo — voronin's counterexample diagnostics now pretty-print
+; Z3 model values as Laudas syntax instead of internal Z3 printouts.
+;
+; This file deliberately omits the `req` preconditions on `area_buggy`,
+; so voronin SHOULD find a counterexample. The interesting part is the
+; counterexample message — it should read
+;
+;     counterexample: b=Box { width: -1, height: 0 } → result = 0
+;
+; not
+;
+;     counterexample: b=Box!val!0 → result = 0
+;
+; Run:  laudas demo_cex_format.laud   (expected: 1 verifier failure with pretty cex)
+
+
+type Box { width: int, height: int }
+
+
+fn area_buggy
+vis appearing
+eff pure
+in b: Box
+out int
+ex area_buggy(Box { width: 3, height: 4 }) == 12
+ens result >= 0
+do
+return b.width * b.height
+end
+
+
+; Same body, this one verifies cleanly because we declared the preconditions.
+fn area_correct
+vis appearing
+eff pure
+in b: Box
+req b.width >= 0
+req b.height >= 0
+out int
+ex area_correct(Box { width: 3, height: 4 }) == 12
+ens result >= 0
+do
+return b.width * b.height
+end

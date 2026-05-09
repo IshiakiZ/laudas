@@ -56,6 +56,7 @@ PASS_FILES = [
 # if these start passing).
 FAIL_FILES = [
     "demo_buggy.laud",
+    "demo_cex_format.laud",  # intentionally trips voronin to demo prettified counterexamples
 ]
 
 # Files where the verifier MUST report at least one `ver ✓` line. Catches

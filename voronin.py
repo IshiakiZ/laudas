@@ -528,6 +528,77 @@ def check_implication(assumptions: list[Any], goal: Any) -> Optional[Any]:
     return None  # Unknown — be conservative
 
 
+def _format_z3_value(model: Any, val: Any) -> str:
+    """Pretty-print a Z3 model value as readable Laudas syntax."""
+    try:
+        sort = val.sort()
+    except Exception:
+        return str(val)
+    sort_name = sort.name() if hasattr(sort, "name") else ""
+
+    # Bool: lower-case
+    if sort == z3.BoolSort():
+        return "true" if str(val) == "True" else "false"
+
+    # Int / Real: just the decimal
+    if sort == z3.IntSort() or sort == z3.RealSort():
+        return str(val)
+
+    # String: quote it
+    if sort == z3.StringSort():
+        s = str(val)
+        if s.startswith('"') and s.endswith('"'):
+            return s
+        return f'"{s}"'
+
+    # Option<int> (our custom IntOpt datatype)
+    if sort_name == "IntOpt":
+        try:
+            if str(model.eval(IntOpt.is_some(val), model_completion=True)) == "True":
+                inner = model.eval(IntOpt.val(val), model_completion=True)
+                return f"Some({_format_z3_value(model, inner)})"
+            return "None"
+        except Exception:
+            return str(val)
+
+    # Records (any sort registered in _RECORD_SORTS): format as `TypeName { f: v, ... }`
+    if sort_name in _RECORD_SORTS:
+        rec_sort = _RECORD_SORTS[sort_name]
+        try:
+            fields = []
+            ctor = rec_sort.constructor(0)
+            for i in range(ctor.arity()):
+                accessor = rec_sort.accessor(0, i)
+                field_val = model.eval(accessor(val), model_completion=True)
+                fields.append(f"{accessor.name()}: {_format_z3_value(model, field_val)}")
+            return f"{sort_name} {{ {', '.join(fields)} }}"
+        except Exception:
+            return str(val)
+
+    # Sequence (list<T>): Z3 prints these as e.g. `Empty(Seq Int)` or `Concat(Unit(0), …)`.
+    # Best-effort prettify: walk the model expression. Falls back to str(val).
+    if str(sort).startswith("(Seq "):
+        try:
+            return _format_seq_value(model, val)
+        except Exception:
+            return str(val)
+
+    return str(val)
+
+
+def _format_seq_value(model: Any, val: Any) -> str:
+    """Try to render a Z3 Seq value as a Laudas list literal."""
+    s = str(val)
+    # Z3 may render simple sequences as:
+    #   Empty(...)             →  []
+    #   Unit(x)                →  [x]
+    #   Concat(Unit(a), b)     →  [a, ...b]
+    # For now do simple regex substitutions; fall back to str(val) if it doesn't fit.
+    if s.startswith("Empty"):
+        return "[]"
+    return s  # let Z3's printout through
+
+
 def _format_cex(model: Any, env: SymEnv) -> str:
     parts = []
     for name, sym in env.syms.items():
@@ -535,7 +606,7 @@ def _format_cex(model: Any, env: SymEnv) -> str:
             continue
         try:
             val = model.eval(sym, model_completion=True)
-            parts.append(f"{name}={val}")
+            parts.append(f"{name}={_format_z3_value(model, val)}")
         except Exception:
             pass
     return ", ".join(parts) if parts else "(no concrete inputs)"
@@ -546,7 +617,8 @@ def _diagnose_ens_failure(fn: Function, source: str, ens: str, cex: Any, env: Sy
     result_val = ""
     if "result" in env.syms:
         try:
-            result_val = str(cex.eval(env.syms["result"], model_completion=True))
+            raw = cex.eval(env.syms["result"], model_completion=True)
+            result_val = _format_z3_value(cex, raw)
         except Exception:
             pass
     return {
@@ -573,7 +645,8 @@ def _diagnose_out_failure(fn: Function, source: str, out_ref: str, cex: Any, env
     cex_str = _format_cex(cex, env)
     result_val = ""
     try:
-        result_val = str(cex.eval(env.syms["result"], model_completion=True))
+        raw = cex.eval(env.syms["result"], model_completion=True)
+        result_val = _format_z3_value(cex, raw)
     except Exception:
         pass
     return {
