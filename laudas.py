@@ -27,10 +27,14 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-# Force UTF-8 stdout/stderr so unicode (✓ ✗ · ─) renders on Windows cp1252 consoles.
+# Force UTF-8 stdout/stderr/stdin so unicode (✓ ✗ · ─) renders on Windows
+# cp1252 consoles, AND so PowerShell-piped UTF-8 BOM bytes are decoded as
+# the single character U+FEFF (which we then strip in _io_read_stdin).
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
+    if hasattr(sys.stdin, "reconfigure"):
+        sys.stdin.reconfigure(encoding="utf-8")
 
 
 # ---------- AST ----------
@@ -552,8 +556,21 @@ def _text_parse_csv(text: str) -> list:
 
 
 def _text_to_json(v: Any) -> str:
-    """Best-effort JSON serialization of a Laudas value."""
+    """Best-effort JSON serialization of a Laudas value (compact)."""
     return json.dumps(_to_jsonable(v), separators=(",", ":"))
+
+
+def _text_to_json_pretty(v: Any) -> str:
+    """Best-effort JSON serialization with 2-space indent."""
+    return json.dumps(_to_jsonable(v), indent=2)
+
+
+def _text_to_int(s: str) -> int:
+    return int(s)
+
+
+def _text_from_int(n: int) -> str:
+    return str(n)
 
 
 def _to_jsonable(v: Any) -> Any:
@@ -605,7 +622,12 @@ def _io_read_line() -> str:
 
 
 def _io_read_stdin() -> str:
-    return sys.stdin.read()
+    data = sys.stdin.read()
+    # PowerShell pipes UTF-8 BOM. Strip it so downstream parsers (json.loads,
+    # text.split, etc.) don't choke on the leading 0xFEFF.
+    if data.startswith("﻿"):
+        data = data[1:]
+    return data
 
 
 MODULES: dict[str, dict[str, Any]] = {
@@ -623,9 +645,12 @@ MODULES: dict[str, dict[str, Any]] = {
         "length":   lambda s: len(s),
         "upper":    lambda s: s.upper(),
         "lower":    lambda s: s.lower(),
-        "trim":     lambda s: s.strip(),
-        "parse_csv": _text_parse_csv,
-        "to_json":  _text_to_json,
+        "trim":     lambda s: s.strip().lstrip("﻿").strip(),  # also strips leading UTF-8 BOM (Windows pipes!)
+        "parse_csv":      _text_parse_csv,
+        "to_json":        _text_to_json,
+        "to_json_pretty": _text_to_json_pretty,
+        "to_int":         _text_to_int,
+        "from_int":       _text_from_int,
     },
     "arith": {
         "abs":      lambda x: abs(x),
@@ -748,6 +773,9 @@ def _python_to_laudas(v: Any, expected: Optional[Type]) -> Any:
         return v
     if isinstance(v, list):
         return [_python_to_laudas(x, None) for x in v]
+    if isinstance(v, dict):
+        # JSON objects round-trip as Laudas records-without-type-tag.
+        return {k: _python_to_laudas(val, None) for k, val in v.items()}
     if isinstance(v, float):
         # No float type yet — round-trip via int when sensible, else best-effort string
         if v.is_integer():

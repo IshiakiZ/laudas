@@ -1,0 +1,43 @@
+; json_pretty.laud — JSON pretty-printer.
+;
+; Reads JSON from stdin, parses via Python's json.loads (extern), re-emits
+; with 2-space indent via text.to_json_pretty.
+;
+; Run:
+;   echo '{"a":1,"b":[2,3]}' | laudas run examples/json_pretty.laud
+;
+; Output:
+;   {
+;     "a": 1,
+;     "b": [
+;       2,
+;       3
+;     ]
+;   }
+
+
+fn parse_json
+vis appearing
+eff pure
+in s: str
+out str
+ex parse_json("[1, 2, 3]") == [1, 2, 3]
+ex parse_json("42") == 42
+extern python "json.loads"
+end
+
+
+fn main
+vis appearing
+eff io
+out int
+do
+let raw = text.trim(io.read_stdin())
+if raw.length() == 0 {
+  io.eprintln("usage: pipe JSON in")
+  io.eprintln("  echo '{\"a\":1}' | laudas run examples/json_pretty.laud")
+  return 64
+}
+io.println(text.to_json_pretty(parse_json(raw)))
+return 0
+end

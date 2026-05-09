@@ -42,6 +42,7 @@ PASS_FILES = [
     "examples/csv2json.laud",
     "examples/wc.laud",
     "examples/sort.laud",
+    "examples/json_pretty.laud",
 ]
 
 # Intentionally-broken demos that MUST fail (CI flags it as a regression
