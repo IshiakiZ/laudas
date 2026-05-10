@@ -68,6 +68,28 @@ If you broke any of those, fix it before submitting. If your change *intentional
 
 Be kind. Specifically: critique designs and code, not people. Assume good faith. If a thread feels heated, take a day. Anyone who can't manage that doesn't belong here.
 
+## Releasing (maintainers)
+
+To cut a new version:
+
+1. Bump `version` in `pyproject.toml`.
+2. Add a changelog entry to `CHANGELOG.md`.
+3. Commit + push to main.
+4. `gh release create vX.Y.Z ./dist/laudas.exe --title "..." --notes "..."`.
+5. Tag-push triggers `.github/workflows/publish.yml` which builds + publishes to PyPI via trusted publishing (no API tokens needed).
+
+First-time PyPI setup:
+
+1. Reserve the `laudas` name at https://pypi.org/manage/account/publishing/
+2. Add a "trusted publisher" pointing at the IshiakiZ/laudas repo, environment-free, workflow `publish.yml`.
+3. The next tagged push auto-publishes.
+
+To rebuild the standalone binary:
+
+```bash
+pyinstaller --onefile --name laudas --hidden-import voronin --hidden-import anthropic --collect-all z3 --clean --noconfirm laudas.py
+```
+
 ## License
 
 By contributing, you agree your contributions are licensed under [Apache 2.0](LICENSE) (the project's license).

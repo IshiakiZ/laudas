@@ -288,6 +288,10 @@ def fmt_value(v: Any) -> str:
             return "None"
         if v[0] == "Some":
             return f"Some({fmt_value(v[1])})"
+        if v[0] == "Ok":
+            return f"Ok({fmt_value(v[1])})"
+        if v[0] == "Err":
+            return f"Err({fmt_value(v[1])})"
         if v[0] == "error":
             return f"<error: {v[1]}>"
     if isinstance(v, bool):
@@ -312,6 +316,10 @@ def parse_value(s: str) -> Any:
         return ("None",)
     if s.startswith("Some(") and s.endswith(")"):
         return ("Some", parse_value(s[5:-1]))
+    if s.startswith("Ok(") and s.endswith(")"):
+        return ("Ok", parse_value(s[3:-1]))
+    if s.startswith("Err(") and s.endswith(")"):
+        return ("Err", parse_value(s[4:-1]))
     if s in ("true", "True"):
         return True
     if s in ("false", "False"):
@@ -549,6 +557,15 @@ METHODS: dict[str, dict[str, Any]] = {
         "unwrap_or": lambda o, default: o[1] if o[0] == "Some" else default,
         "value":     lambda o: o[1] if o[0] == "Some" else (_ for _ in ()).throw(RuntimeFail("called .value() on None")),
     },
+    "result": {
+        "is_ok":     lambda r: r[0] == "Ok",
+        "is_err":    lambda r: r[0] == "Err",
+        "unwrap_or": lambda r, default: r[1] if r[0] == "Ok" else default,
+        "value":     lambda r: r[1] if r[0] == "Ok" else (_ for _ in ()).throw(RuntimeFail("called .value() on Err")),
+        "error":     lambda r: r[1] if r[0] == "Err" else (_ for _ in ()).throw(RuntimeFail("called .error() on Ok")),
+        "map_ok":    lambda r, fn: ("Ok", fn.call(r[1])) if r[0] == "Ok" and isinstance(fn, LaudasLambda) else r,
+        "map_err":   lambda r, fn: ("Err", fn.call(r[1])) if r[0] == "Err" and isinstance(fn, LaudasLambda) else r,
+    },
 }
 
 
@@ -637,6 +654,90 @@ def _io_read_stdin() -> str:
     return data
 
 
+def _io_exit(code: int) -> Any:
+    sys.exit(code)
+
+
+# --- Time module ---
+
+def _time_now() -> int:
+    import time as _time
+    return int(_time.time())
+
+
+def _time_sleep(seconds: int) -> Any:
+    import time as _time
+    _time.sleep(seconds)
+    return ("None",)
+
+
+# --- Env module ---
+
+def _env_get(name: str, default: str) -> str:
+    import os as _os
+    return _os.environ.get(name, default)
+
+
+def _env_has(name: str) -> bool:
+    import os as _os
+    return name in _os.environ
+
+
+# --- FS module ---
+
+def _fs_list_dir(path: str) -> list:
+    import os as _os
+    try:
+        return sorted(_os.listdir(path))
+    except OSError:
+        return []
+
+
+def _fs_exists(path: str) -> bool:
+    import os as _os
+    return _os.path.exists(path)
+
+
+def _fs_is_file(path: str) -> bool:
+    import os as _os
+    return _os.path.isfile(path)
+
+
+def _fs_is_dir(path: str) -> bool:
+    import os as _os
+    return _os.path.isdir(path)
+
+
+def _fs_size(path: str) -> int:
+    import os as _os
+    try:
+        return _os.path.getsize(path)
+    except OSError:
+        return -1
+
+
+# --- Path module ---
+
+def _path_join(a: str, b: str) -> str:
+    import os as _os
+    return _os.path.join(a, b)
+
+
+def _path_basename(path: str) -> str:
+    import os as _os
+    return _os.path.basename(path)
+
+
+def _path_dirname(path: str) -> str:
+    import os as _os
+    return _os.path.dirname(path)
+
+
+def _path_extname(path: str) -> str:
+    import os as _os
+    return _os.path.splitext(path)[1]
+
+
 MODULES: dict[str, dict[str, Any]] = {
     "io": {
         "print":      _io_print,
@@ -644,6 +745,28 @@ MODULES: dict[str, dict[str, Any]] = {
         "eprintln":   _io_eprintln,
         "read_line":  _io_read_line,
         "read_stdin": _io_read_stdin,
+        "exit":       _io_exit,
+    },
+    "time": {
+        "now":   _time_now,
+        "sleep": _time_sleep,
+    },
+    "env": {
+        "get": _env_get,
+        "has": _env_has,
+    },
+    "fs": {
+        "list_dir": _fs_list_dir,
+        "exists":   _fs_exists,
+        "is_file":  _fs_is_file,
+        "is_dir":   _fs_is_dir,
+        "size":     _fs_size,
+    },
+    "path": {
+        "join":     _path_join,
+        "basename": _path_basename,
+        "dirname":  _path_dirname,
+        "extname":  _path_extname,
     },
     "text": {
         "split":    lambda s, sep: s.split(sep),
@@ -690,8 +813,11 @@ def value_type_name(v: Any) -> str:
         return "str"
     if isinstance(v, list):
         return "list"
-    if isinstance(v, tuple) and v and v[0] in ("Some", "None"):
-        return "option"
+    if isinstance(v, tuple) and v:
+        if v[0] in ("Some", "None"):
+            return "option"
+        if v[0] in ("Ok", "Err"):
+            return "result"
     return "unknown"
 
 
@@ -973,9 +1099,13 @@ def eval_expr(expr: str, env: dict[str, Any]) -> Any:
                     record[fname.strip()] = eval_expr(fval.strip(), env)
             return record
 
-    # 6. Some(EXPR)
+    # 6. Some(EXPR) / Ok(EXPR) / Err(EXPR)
     if s.startswith("Some(") and s.endswith(")") and balanced(s):
         return ("Some", eval_expr(s[5:-1], env))
+    if s.startswith("Ok(") and s.endswith(")") and balanced(s):
+        return ("Ok", eval_expr(s[3:-1], env))
+    if s.startswith("Err(") and s.endswith(")") and balanced(s):
+        return ("Err", eval_expr(s[4:-1], env))
 
     # 6b. Bare function call: NAME(args) where NAME is a registered Laudas function
     fc = re.match(r"^([A-Za-z_]\w*)\((.*)\)$", s, flags=re.DOTALL)
@@ -1239,25 +1369,45 @@ def run_example(fn: Function, ex_str: str) -> ExampleResult:
     # Strip trailing comments after `--`
     if "--" in ex_str:
         ex_str = ex_str.split("--", 1)[0].strip()
-    if "==" not in ex_str:
+    # Split on the first top-level `==` (skipping inside parens/brackets/strings)
+    eq_idx = _find_top_level_eq(ex_str)
+    if eq_idx < 0:
         return ExampleResult(raw=ex_str, ok=False, error=f"example missing ==: {ex_str!r}")
-    call_str, expected_str = ex_str.split("==", 1)
-    call_str = call_str.strip()
-    expected_str = expected_str.strip()
-    m = re.match(r"^(\w+)\((.*)\)$", call_str)
-    if not m:
-        return ExampleResult(raw=ex_str, ok=False, error=f"malformed call: {call_str!r}")
-    name, args_str = m.groups()
-    if name != fn.name:
-        return ExampleResult(raw=ex_str, ok=False, error=f"example calls {name!r}, expected {fn.name!r}")
-    args = [parse_value(a.strip()) for a in split_top_level_commas(args_str)] if args_str.strip() else []
+    call_str = ex_str[:eq_idx].strip()
+    expected_str = ex_str[eq_idx + 2:].strip()
+    # The LHS must mention this function. Catches "wrong fn referenced" without
+    # losing the ability to call methods on the result.
+    if not call_str.startswith(fn.name):
+        return ExampleResult(raw=ex_str, ok=False, error=f"example does not start with {fn.name!r}")
     expected = parse_value(expected_str)
     try:
-        actual = run_body(fn, args)
+        actual = eval_expr(call_str, {})
     except RuntimeFail as rf:
         return ExampleResult(raw=ex_str, ok=False, expected=expected, error=f"runtime: {rf.message}")
     ok = values_equal(actual, expected)
     return ExampleResult(raw=ex_str, ok=ok, expected=expected, actual=actual)
+
+
+def _find_top_level_eq(s: str) -> int:
+    """Find the first `==` at depth 0 (outside parens/brackets/braces/strings)."""
+    depth = 0
+    in_string = False
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == '"' and (i == 0 or s[i - 1] != "\\"):
+            in_string = not in_string
+            i += 1
+            continue
+        if not in_string:
+            if c in "([{":
+                depth += 1
+            elif c in ")]}":
+                depth -= 1
+            elif depth == 0 and s[i:i + 2] == "==":
+                return i
+        i += 1
+    return -1
 
 
 def split_top_level(s: str, sep: str) -> list[str]:
@@ -1807,6 +1957,56 @@ def run_program(path: str, program_args: list[str]) -> int:
     return 0
 
 
+# ---------- `laudas repl` — read / eval / print loop ----------
+
+def repl() -> int:
+    """Interactive Laudas. Each line is an expression OR a `let NAME = EXPR`.
+    Env persists across lines, so:
+        > let x = 41
+          x = 41
+        > x + 1
+          = 42
+    """
+    # Make any module-loaded types/functions available
+    print("  laudas REPL  ·  expressions or `let NAME = EXPR`  ·  Ctrl-D / `exit` to quit")
+    print()
+    env: dict[str, Any] = {}
+    let_re = re.compile(r"^let\s+([A-Za-z_]\w*)\s*=\s*(.+)$", flags=re.DOTALL)
+    while True:
+        try:
+            line = input("> ").strip().lstrip("﻿")  # also strip BOM (Windows pipes)
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not line:
+            continue
+        if line in ("exit", "quit", ":q"):
+            break
+        if line in ("help", "?"):
+            print("  expressions:  1 + 2 ·  [1, 2, 3].sum() ·  text.upper(\"hi\")")
+            print("  bindings:     let x = 5")
+            print("  quit:         exit | quit | :q | Ctrl-D")
+            continue
+        m = let_re.match(line)
+        if m:
+            name, expr_str = m.groups()
+            try:
+                env[name] = eval_expr(expr_str.strip(), env)
+                print(f"  {name} = {fmt_value(env[name])}")
+            except (RuntimeFail, ParseError, Exception) as e:
+                msg = e.message if isinstance(e, RuntimeFail) else str(e)
+                print(f"  error: {msg}")
+            continue
+        try:
+            result = eval_expr(line, env)
+            print(f"  = {fmt_value(result)}")
+        except (RuntimeFail, Exception) as e:
+            msg = e.message if isinstance(e, RuntimeFail) else str(e)
+            print(f"  error: {msg}")
+    print("bye.")
+    return 0
+
+
 # ---------- CLI ----------
 
 def check_file(path: str) -> int:
@@ -1909,6 +2109,7 @@ def main() -> int:
         print("  laudas FILE.laud                  parse + run examples + verify", file=sys.stderr)
         print("  laudas --show FILE.laud           render as Laudan archive entries", file=sys.stderr)
         print("  laudas run FILE.laud [ARGS...]    execute the file's `main` function", file=sys.stderr)
+        print("  laudas repl                       interactive read-eval-print loop", file=sys.stderr)
         print("  laudas request-body FILE.laud     fill empty `do` blocks via Claude", file=sys.stderr)
         print("                                    (requires ANTHROPIC_API_KEY)", file=sys.stderr)
         return 0 if args and args[0] in ("-h", "--help") else 64
@@ -1922,6 +2123,8 @@ def main() -> int:
             print("usage: laudas run FILE.laud [ARGS...]", file=sys.stderr)
             return 64
         return run_program(args[1], args[2:])
+    if args[0] == "repl":
+        return repl()
     if args[0] == "request-body":
         if len(args) < 2:
             print("usage: laudas request-body FILE.laud [-o OUTPUT.laud]", file=sys.stderr)

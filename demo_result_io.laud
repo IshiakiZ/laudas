@@ -1,0 +1,39 @@
+; v0.5.12 demo — Result<T, E> + the new I/O modules (env, fs, time, path).
+;
+; Shows recoverable error handling without try/catch, plus the OS-facing
+; stdlib that lets Laudas talk to the system.
+;
+; Run:  laudas demo_result_io.laud
+
+
+; ============================================================
+;  Result<T, E> demo
+; ============================================================
+
+fn divide_or_err
+vis appearing
+eff pure
+in a: int
+in b: int
+ex divide_or_err(10, 2).is_ok() == true
+ex divide_or_err(10, 0).is_err() == true
+ex divide_or_err(10, 2).unwrap_or(0) == 5
+ex divide_or_err(10, 0).unwrap_or(-1) == -1
+do
+if b == 0 { return Err("division by zero") }
+return Ok(a / b)
+end
+
+
+; ============================================================
+;  Filesystem demo (no examples — interacts with real fs)
+; ============================================================
+
+fn list_laud_files
+vis appearing
+eff io
+in dir: str
+out list<str>
+do
+return fs.list_dir(dir).filter(name -> path.extname(name) == ".laud")
+end

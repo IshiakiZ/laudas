@@ -4,6 +4,44 @@ All notable changes to Laudas. The format follows [Keep a Changelog](https://kee
 
 ---
 
+## [v0.5.12] — 2026-05-10 — REPL, Result, OS stdlib, tree-sitter, LSP, VS Code, PyPI workflow
+
+The "make Laudas usable like Python" batch. Seven directions all advanced.
+
+### Added — language
+
+- **`Result<T, E>`** as a first-class variant. Constructors `Ok(v)` / `Err(e)`. Methods on result: `.is_ok()`, `.is_err()`, `.value()`, `.error()`, `.unwrap_or(default)`, `.map_ok(fn)`, `.map_err(fn)`. Pretty-printed in counterexamples too.
+
+### Added — stdlib (the "talk to the OS" set)
+
+- **`time`** — `time.now()` (Unix timestamp), `time.sleep(seconds)`.
+- **`env`** — `env.get(name, default)`, `env.has(name)`.
+- **`fs`** — `fs.list_dir(path)`, `fs.exists(path)`, `fs.is_file(path)`, `fs.is_dir(path)`, `fs.size(path)`.
+- **`path`** — `path.join(a, b)`, `path.basename(p)`, `path.dirname(p)`, `path.extname(p)`.
+- **`io.exit(code)`** — explicit process exit with a code.
+
+### Added — toolchain
+
+- **`laudas repl`** — interactive read-eval-print loop. `let NAME = EXPR` persists; expressions print their value. `Ctrl-D` or `exit` quits.
+- **Chained-call examples** — `run_example` now evaluates the LHS via `eval_expr`, so `ex divide_or_err(10, 2).is_ok() == true` works as you'd expect.
+
+### Added — editor support (scaffolds)
+
+- **[`vscode-laudas/`](vscode-laudas/)** — VS Code extension. TextMate grammar covers slot keywords, control keywords, visibility/effect values, variant constructors, types (primitive + generic + refined + TitleCased), strings with escapes, numbers, booleans, operators, comments. Language configuration handles brackets, comments, indentation. Build with `vsce package`, install with `code --install-extension`.
+- **[`tree-sitter-laudas/`](tree-sitter-laudas/)** — Tree-sitter grammar (`grammar.js`). Mirrors the slot-based wire format with full expression precedence. `npx tree-sitter generate` produces the parser. Targets Neovim, Helix, VS Code, Emacs.
+- **[`lsp_server.py`](lsp_server.py)** — minimal LSP over stdio. Implements initialize, didOpen, didChange, didClose, shutdown, exit. On document changes runs `laudas FILE` and emits diagnostics extracted from the structured-payload JSON. Foundation for inline error squiggles in any LSP-compatible editor.
+
+### Added — distribution
+
+- **[`.github/workflows/publish.yml`](.github/workflows/publish.yml)** — auto-publish to PyPI on tag push, via trusted publishing (no API tokens needed once the project is configured on PyPI).
+- **CONTRIBUTING.md** — release process documented.
+
+### Demo
+
+[`demo_result_io.laud`](demo_result_io.laud) — `divide_or_err(10, 2).is_ok()` style chain, plus `list_laud_files` showing `fs.list_dir + path.extname`. 4 examples verify chained calls.
+
+---
+
 ## [v0.5.11] — 2026-05-09 — 25-task batch: contains, four tools, two tutorials, ARCHITECTURE.md
 
 A planned 25-task batch landing all together.

@@ -1,0 +1,25 @@
+{
+  "name": "tree-sitter-laudas",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for the Laudas programming language",
+  "main": "bindings/node",
+  "keywords": ["parser", "tree-sitter", "laudas"],
+  "author": "Pearce Harshbarger",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IshiakiZ/laudas",
+    "directory": "tree-sitter-laudas"
+  },
+  "tree-sitter": [{
+    "scope": "source.laudas",
+    "file-types": ["laud"]
+  }],
+  "scripts": {
+    "build": "tree-sitter generate && tree-sitter test",
+    "test": "tree-sitter test"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.20.0"
+  }
+}

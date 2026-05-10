@@ -1,0 +1,93 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Laudas",
+  "scopeName": "source.laudas",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#slot-keywords" },
+    { "include": "#control-keywords" },
+    { "include": "#visibility-values" },
+    { "include": "#effect-values" },
+    { "include": "#variant-constructors" },
+    { "include": "#booleans" },
+    { "include": "#types" },
+    { "include": "#operators" },
+    { "include": "#function-calls" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.semicolon.laudas",
+      "match": ";.*$"
+    },
+    "strings": {
+      "name": "string.quoted.double.laudas",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.laudas",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "numbers": {
+      "name": "constant.numeric.laudas",
+      "match": "\\b-?\\d+\\b"
+    },
+    "slot-keywords": {
+      "name": "keyword.declaration.slot.laudas",
+      "match": "^\\s*(fn|vis|for|eff|in|out|ex|req|ens|prose|do|end|type|use|extern|module)\\b"
+    },
+    "control-keywords": {
+      "name": "keyword.control.laudas",
+      "match": "\\b(let|if|else|return|iff|implies)\\b"
+    },
+    "visibility-values": {
+      "name": "constant.language.visibility.laudas",
+      "match": "\\b(appearing|disappearing|answering)\\b"
+    },
+    "effect-values": {
+      "name": "constant.language.effect.laudas",
+      "match": "\\b(pure|io|panics|nondet|fails|cache|cache_rw)\\b"
+    },
+    "variant-constructors": {
+      "name": "constant.language.variant.laudas",
+      "match": "\\b(Some|None|Ok|Err)\\b"
+    },
+    "booleans": {
+      "name": "constant.language.boolean.laudas",
+      "match": "\\b(true|false|True|False)\\b"
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.laudas",
+          "match": "\\b(int|bool|str|float|bytes|unit)\\b"
+        },
+        {
+          "name": "support.type.builtin.laudas",
+          "match": "\\b(list|option|result|map|set)(?=<)"
+        },
+        {
+          "name": "entity.name.type.laudas",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+    "operators": {
+      "name": "keyword.operator.laudas",
+      "match": "(==|!=|<=|>=|<|>|\\+|-|\\*|/|%|&&|\\|\\||->|=>|=)"
+    },
+    "function-calls": {
+      "name": "entity.name.function.laudas",
+      "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(?=\\()"
+    },
+    "identifiers": {
+      "name": "variable.other.laudas",
+      "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+    }
+  }
+}

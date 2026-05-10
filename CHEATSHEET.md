@@ -134,6 +134,11 @@ arith.abs(x)          arith.min(a, b)     arith.max(a, b)   arith.pow(a, b)
 arith.sum_of(xs)      arith.min_of(xs)    arith.max_of(xs)
 ledger.range(n)       ledger.length(xs)
 archive.read(path)    archive.write(path, content)
+time.now()            time.sleep(seconds)
+env.get(name, default)                    env.has(name)
+fs.list_dir(path)     fs.exists(path)     fs.is_file(path)  fs.is_dir(path)  fs.size(path)
+path.join(a, b)       path.basename(p)    path.dirname(p)   path.extname(p)
+io.exit(code)
 ```
 
 ## Built-in methods
@@ -172,6 +177,17 @@ opt.is_some()         opt.is_none()         opt.value()
 opt.unwrap_or(default)
 ```
 
+### Result<T, E>
+
+```laudas
+res.is_ok()           res.is_err()
+res.value()           res.error()
+res.unwrap_or(default)
+res.map_ok(x -> ...)  res.map_err(e -> ...)
+```
+
+Constructors: `Ok(value)`, `Err(message)`. Used the same way as `Some` / `None`.
+
 ---
 
 ## CLI
@@ -180,6 +196,7 @@ opt.unwrap_or(default)
 laudas FILE.laud                  ; verify (parse + run examples + Z3)
 laudas --show FILE.laud           ; render as Laudan archive entries
 laudas run FILE.laud [args...]    ; execute the file's main function
+laudas repl                       ; interactive read-eval-print loop
 laudas request-body FILE.laud     ; fill empty `do` blocks via Claude (needs ANTHROPIC_API_KEY)
 ```
 

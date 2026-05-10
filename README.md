@@ -9,7 +9,9 @@
 
 A verification-first programming language designed for AI agents to generate and human-AI pairs to maintain. The compiler talks back to the model in plain English. The verifier (Z3-backed) does the proofs. The wire format is engineered for LLM tokens; the display format is rendered as Laudan archival entries — pages from *Volume I*.
 
-**Status:** pre-alpha (v0.5.11). Working: parser, example runner, Z3 verification (let-bindings, records, lists, string-methods, contains, filter/map length-bounds, pretty cex), display renderer, lists / lambdas / method-chaining, type aliases / records / field access, multi-file modules via `use`, bare function calls, runnable programs via `laudas run`, Python FFI via `extern python`, **spec-first inversion** via `laudas request-body`, standalone exe, pip install. Eleven CLI tools in `examples/` (csv2json, wc, sort, head, tail, uniq, json_pretty, bars, stats, word_freq, grep, cat, calc_rpn). Scaffolded: native Rust port (`rust/`), synthetic-corpus pipeline (`synthesis/`).
+**Status:** pre-alpha (v0.5.12). Working: parser, example runner, Z3 verification (let-bindings, records, lists, string-methods, contains, filter/map length-bounds, pretty cex), display renderer, lists / lambdas / method-chaining, type aliases / records / field access, multi-file modules via `use`, bare function calls, runnable programs via `laudas run`, **interactive REPL via `laudas repl`**, **`Result<T, E>` type with method chaining**, OS stdlib (`fs` / `env` / `time` / `path` / `io.exit`), Python FFI via `extern python`, spec-first inversion via `laudas request-body`, standalone exe, pip install. Fourteen CLI tools in `examples/` (csv2json, wc, sort, head, tail, uniq, json_pretty, bars, stats, word_freq, grep, cat, calc_rpn, **minesweeper**).
+
+**Scaffolded** (working starts, not full implementations yet): native Rust port (`rust/`), synthetic-corpus pipeline (`synthesis/`), **VS Code extension** (`vscode-laudas/`), **tree-sitter grammar** (`tree-sitter-laudas/`), **LSP server** (`lsp_server.py`), **PyPI publish workflow** (`.github/workflows/publish.yml`).
 
 ---
 

@@ -1,0 +1,30 @@
+{
+  "name": "laudas",
+  "displayName": "Laudas",
+  "description": "Syntax highlighting and language configuration for Laudas (.laud) files",
+  "version": "0.1.0",
+  "publisher": "ishiakiz",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IshiakiZ/laudas"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Programming Languages"],
+  "keywords": ["laudas", "verification", "z3", "ai"],
+  "contributes": {
+    "languages": [{
+      "id": "laudas",
+      "aliases": ["Laudas", "laudas"],
+      "extensions": [".laud"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "laudas",
+      "scopeName": "source.laudas",
+      "path": "./syntaxes/laudas.tmLanguage.json"
+    }]
+  }
+}

@@ -58,6 +58,7 @@ PASS_FILES = [
     "examples/cat.laud",
     "examples/calc_rpn.laud",
     "examples/minesweeper.laud",
+    "demo_result_io.laud",
     "tutorial/07_modules.laud",
     "tutorial/08_ffi.laud",
 ]
