@@ -1,0 +1,14 @@
+; demo_is_empty.laud - list.is_empty() examples
+; Run:  laudas demo_is_empty.laud
+
+fn no_items
+vis appearing
+eff pure
+in xs: list<int>
+out bool
+ex no_items([]) == true
+ex no_items([7]) == false
+ex no_items([1, 2, 3]) == false
+do
+return xs.is_empty()
+end

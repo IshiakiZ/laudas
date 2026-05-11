@@ -44,6 +44,7 @@ PASS_FILES = [
     "examples/sort.laud",
     "examples/json_pretty.laud",
     "demo_string_verify.laud",
+    "demo_is_empty.laud",
     "examples/head.laud",
     "examples/tail.laud",
     "examples/uniq.laud",
